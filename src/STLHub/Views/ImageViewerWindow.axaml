@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="STLHub.Views.ImageViewerWindow"
+        Title="Thumbnail"
+        Width="600" Height="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#1e1e1e">
+
+    <Border Background="#1e1e1e" Padding="0">
+        <Image x:Name="ViewerImage"
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"/>
+    </Border>
+</Window>

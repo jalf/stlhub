@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/STLHub/STLHub.csproj" />
+  </Folder>
+  <Project Path="Scratch/Scratch.csproj" />
+</Solution>

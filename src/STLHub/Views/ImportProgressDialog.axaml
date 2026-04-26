@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="STLHub.Views.ImportProgressDialog"
+        Title="Importando pasta"
+        Width="480" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <Grid RowDefinitions="Auto, Auto, Auto, *, Auto" Margin="24">
+        <TextBlock x:Name="TitleText" Grid.Row="0" FontSize="16" FontWeight="Bold"
+                   Text="Importando pasta..." Margin="0,0,0,12"/>
+
+        <ProgressBar x:Name="ProgressBar" Grid.Row="1" Height="6" Minimum="0" Maximum="100"
+                     IsIndeterminate="True" CornerRadius="3"
+                     Foreground="{DynamicResource AccentColor}" Margin="0,0,0,8"/>
+
+        <TextBlock x:Name="StatusText" Grid.Row="2" FontSize="12" Opacity="0.7"
+                   TextTrimming="CharacterEllipsis" Text="Preparando..."/>
+
+        <TextBlock x:Name="CountText" Grid.Row="3" FontSize="12" Opacity="0.5"
+                   VerticalAlignment="Center"
+                   Text="0 objeto(s), 0 anexo(s)"/>
+
+        <Button x:Name="CancelButton" Grid.Row="4"
+                Content="Cancelar"
+                HorizontalAlignment="Right"
+                Width="100" Padding="12,8"
+                CornerRadius="6"
+                Click="Cancel_Click"/>
+    </Grid>
+</Window>

@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="STLHub.Views.ConfirmationDialog"
+        Title="Confirmação"
+        Width="420" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <Grid RowDefinitions="*, Auto" Margin="24">
+        <StackPanel Grid.Row="0" Spacing="12" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="⚠" FontSize="28" Foreground="#FFC107" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </StackPanel>
+            <TextBlock x:Name="MessageText" FontSize="13" Opacity="0.75" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Cancelar"
+                    Width="90"
+                    Padding="12,8"
+                    CornerRadius="6"
+                    Click="Cancel_Click"/>
+            <Button Content="Confirmar"
+                    Width="90"
+                    Padding="12,8"
+                    Background="{DynamicResource DangerColor}"
+                    Foreground="{DynamicResource TextOnAccent}"
+                    FontWeight="Bold"
+                    CornerRadius="6"
+                    Click="Confirm_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
