@@ -151,7 +151,10 @@
                 <!-- "All Objects" -->
                 <Border Grid.Row="1" Cursor="Hand" PointerPressed="AllObjects_PointerPressed"
                         Padding="14,10" Name="AllObjectsBorder"
-                        Background="Transparent">
+                        Background="Transparent"
+                        DragDrop.AllowDrop="True"
+                        DragDrop.DragOver="RootCategory_DragOver"
+                        DragDrop.Drop="RootCategory_Drop">
                     <Border.Styles>
                         <Style Selector="Border:pointerover">
                             <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
@@ -256,6 +259,11 @@
                                 </Border>
                             </ControlTemplate>
                         </TreeView.Template>
+                        <TreeView.Styles>
+                            <Style Selector="TreeViewItem" x:DataType="vm:CategoryNode">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.Styles>
                         <TreeView.ItemContainerTheme>
                             <ControlTheme TargetType="TreeViewItem">
                                 <Setter Property="Padding" Value="0"/>
@@ -338,9 +346,12 @@
                                 <TreeDataTemplate DataType="vm:CategoryNode" ItemsSource="{Binding Children}">
                                     <Grid Name="CategoryItemRoot"
                                           MinHeight="32"
+                                          Background="Transparent"
                                           DragDrop.AllowDrop="True"
                                           DragDrop.Drop="Category_Drop"
-                                          DragDrop.DragOver="Category_DragOver">
+                                          DragDrop.DragOver="Category_DragOver"
+                                          PointerPressed="Category_PointerPressed"
+                                          PointerMoved="Category_PointerMoved">
                                         <!-- Display Mode -->
                                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,2"
                                                     IsVisible="{Binding !IsEditing}"

@@ -173,9 +173,21 @@ public class ObjectRepository
     public void DeleteCategory(int id)
     {
         using var connection = new SqliteConnection(_connectionString);
-        connection.Execute("DELETE FROM Category WHERE Id = @Id", new { Id = id });
-        connection.Execute("UPDATE Category SET ParentCategoryId = NULL WHERE ParentCategoryId = @Id", new { Id = id });
-        connection.Execute("UPDATE Object3D SET CategoryId = NULL WHERE CategoryId = @Id", new { Id = id });
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        DeleteCategoryRecursive(connection, transaction, id);
+        transaction.Commit();
+    }
+
+    private void DeleteCategoryRecursive(SqliteConnection connection, SqliteTransaction transaction, int id)
+    {
+        var childIds = connection.Query<int>(
+            "SELECT Id FROM Category WHERE ParentCategoryId = @Id", new { Id = id }, transaction);
+        foreach (var childId in childIds)
+            DeleteCategoryRecursive(connection, transaction, childId);
+
+        connection.Execute("UPDATE Object3D SET CategoryId = NULL WHERE CategoryId = @Id", new { Id = id }, transaction);
+        connection.Execute("DELETE FROM Category WHERE Id = @Id", new { Id = id }, transaction);
     }
 
     public void UpdateObjectCategory(int objectId, int? categoryId)

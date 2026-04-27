@@ -268,6 +268,7 @@ public partial class MainWindow : Window
     private bool _isDragging;
     private PointerPressedEventArgs? _dragStartEvent;
     private Object3D? _draggedObject;
+    private CategoryNode? _draggedCategory;
 
     private void Object3D_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -307,6 +308,16 @@ public partial class MainWindow : Window
 
     private void Category_DragOver(object? sender, DragEventArgs e)
     {
+        if (_draggedCategory != null)
+        {
+            var targetNode = (sender as Control)?.DataContext as CategoryNode;
+            if (targetNode == null || targetNode == _draggedCategory || IsDescendantOf(targetNode, _draggedCategory))
+            {
+                e.DragEffects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+        }
         e.DragEffects = DragDropEffects.Move;
         e.Handled = true;
     }
@@ -314,13 +325,85 @@ public partial class MainWindow : Window
     private void Category_Drop(object? sender, DragEventArgs e)
     {
         var categoryNode = (sender as Control)?.DataContext as CategoryNode;
-        var obj = _draggedObject;
 
-        if (obj != null && categoryNode != null && DataContext is MainWindowViewModel vm)
+        if (_draggedCategory != null && categoryNode != null && DataContext is MainWindowViewModel vm)
         {
-            vm.MoveObjectToCategory(obj, categoryNode);
+            if (categoryNode != _draggedCategory && !IsDescendantOf(categoryNode, _draggedCategory))
+            {
+                vm.MoveCategoryToParent(_draggedCategory, categoryNode);
+                e.Handled = true;
+            }
+        }
+        else if (_draggedObject != null && categoryNode != null && DataContext is MainWindowViewModel vm2)
+        {
+            vm2.MoveObjectToCategory(_draggedObject, categoryNode);
             e.Handled = true;
         }
+    }
+
+    private void Category_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(sender as Control);
+        if (point.Properties.IsLeftButtonPressed)
+        {
+            _dragStartEvent = e;
+            _dragStartPoint = point.Position;
+            _isDragging = false;
+            if (sender is Control control && control.DataContext is CategoryNode node)
+            {
+                _draggedCategory = node;
+                _draggedObject = null;
+            }
+        }
+    }
+
+    private async void Category_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragStartPoint.HasValue && !_isDragging && _dragStartEvent != null && _draggedCategory != null)
+        {
+            var point = e.GetCurrentPoint(sender as Control);
+            if (point.Properties.IsLeftButtonPressed)
+            {
+                var diff = point.Position - _dragStartPoint.Value;
+                if (Math.Abs(diff.X) > 5 || Math.Abs(diff.Y) > 5)
+                {
+                    _isDragging = true;
+                    var dragData = new DataTransfer();
+                    await DragDrop.DoDragDropAsync(_dragStartEvent, dragData, DragDropEffects.Move);
+                    _dragStartPoint = null;
+                    _dragStartEvent = null;
+                    _draggedCategory = null;
+                }
+            }
+        }
+    }
+
+    private void RootCategory_DragOver(object? sender, DragEventArgs e)
+    {
+        if (_draggedCategory != null && _draggedCategory.Category.ParentCategoryId != null)
+            e.DragEffects = DragDropEffects.Move;
+        else
+            e.DragEffects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void RootCategory_Drop(object? sender, DragEventArgs e)
+    {
+        if (_draggedCategory != null && DataContext is MainWindowViewModel vm)
+        {
+            vm.MoveCategoryToRoot(_draggedCategory);
+            e.Handled = true;
+        }
+    }
+
+    private static bool IsDescendantOf(CategoryNode potentialChild, CategoryNode potentialParent)
+    {
+        foreach (var child in potentialParent.Children)
+        {
+            if (child == potentialChild) return true;
+            if (IsDescendantOf(potentialChild, child)) return true;
+        }
+        return false;
     }
 
     private void AllObjects_PointerPressed(object? sender, PointerPressedEventArgs e)

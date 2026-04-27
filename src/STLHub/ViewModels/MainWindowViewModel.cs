@@ -282,6 +282,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void LoadCategories()
     {
+        var expandedIds = new HashSet<int>();
+        CollectExpandedIds(Categories, expandedIds);
+
         Categories.Clear();
         if (_repository == null) return;
 
@@ -290,7 +293,10 @@ public partial class MainWindowViewModel : ViewModelBase
         
         foreach (var cat in allCats)
         {
-            nodeLookup[cat.Id] = new CategoryNode(cat);
+            var node = new CategoryNode(cat);
+            if (expandedIds.Contains(cat.Id))
+                node.IsExpanded = true;
+            nodeLookup[cat.Id] = node;
         }
 
         foreach (var node in nodeLookup.Values.OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase))
@@ -303,6 +309,16 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 Categories.Add(node);
             }
+        }
+    }
+
+    private static void CollectExpandedIds(IEnumerable<CategoryNode> nodes, HashSet<int> expandedIds)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.IsExpanded)
+                expandedIds.Add(node.Category.Id);
+            CollectExpandedIds(node.Children, expandedIds);
         }
     }
 
@@ -527,24 +543,35 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteCategory(CategoryNode? node)
     {
-        if (node == null || _repository == null) return;
+        if (node == null || _repository == null || _libraryManager == null) return;
 
-        // Conta objetos na própria pasta e recursivamente nas subpastas
         int count = CountObjectsRecursive(node);
-        if (count > 0)
+        string message = count > 0
+            ? $"A pasta \"{node.Name}\" contém {count} objeto(s) 3D.\nOs objetos e seus arquivos serão excluídos permanentemente.\n\nDeseja excluir mesmo assim?"
+            : $"Deseja excluir a pasta \"{node.Name}\"?";
+
+        if (ShowConfirmAsync != null)
         {
-            if (ShowWarningAsync != null)
-            {
-                await ShowWarningAsync(
-                    "Pasta com objetos",
-                    $"A pasta \"{node.Name}\" contém {count} objeto(s) 3D.\n\nMova ou remova os objetos antes de excluir a pasta.");
-            }
-            return;
+            bool confirmed = await ShowConfirmAsync("Excluir pasta", message);
+            if (!confirmed) return;
         }
 
+        var parentId = node.Category.ParentCategoryId;
+        await Task.Run(() => DeleteObjectsRecursive(node));
         _repository.DeleteCategory(node.Category.Id);
         LoadCategories();
+        SelectedCategory = parentId.HasValue ? FindCategoryNode(Categories, parentId.Value) : null;
         LoadItems(SearchText);
+    }
+
+    private void DeleteObjectsRecursive(CategoryNode node)
+    {
+        if (_repository == null || _libraryManager == null) return;
+        var objects = _repository.GetAllObjects(categoryId: node.Category.Id);
+        foreach (var obj in objects)
+            _libraryManager.DeleteObject(obj);
+        foreach (var child in node.Children)
+            DeleteObjectsRecursive(child);
     }
 
     private int CountObjectsRecursive(CategoryNode node)
@@ -554,6 +581,17 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var child in node.Children)
             count += CountObjectsRecursive(child);
         return count;
+    }
+
+    private CategoryNode? FindCategoryNode(IEnumerable<CategoryNode> nodes, int categoryId)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Category.Id == categoryId) return node;
+            var found = FindCategoryNode(node.Children, categoryId);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     [RelayCommand]
@@ -578,6 +616,26 @@ public partial class MainWindowViewModel : ViewModelBase
             _repository.UpdateObjectCategory(obj.Id, node?.Category.Id);
             LoadItems(SearchText);
         }
+    }
+
+    public void MoveCategoryToParent(CategoryNode source, CategoryNode target)
+    {
+        if (_repository == null) return;
+        if (source.Category.ParentCategoryId == target.Category.Id) return;
+
+        source.Category.ParentCategoryId = target.Category.Id;
+        _repository.UpdateCategory(source.Category);
+        LoadCategories();
+    }
+
+    public void MoveCategoryToRoot(CategoryNode source)
+    {
+        if (_repository == null) return;
+        if (source.Category.ParentCategoryId == null) return;
+
+        source.Category.ParentCategoryId = null;
+        _repository.UpdateCategory(source.Category);
+        LoadCategories();
     }
 
     [RelayCommand]
