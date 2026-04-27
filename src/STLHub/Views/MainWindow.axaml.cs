@@ -23,10 +23,14 @@ namespace STLHub.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".stl", ".3mf", ".obj" };
+
     public MainWindow()
     {
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, Drop);
+        AddHandler(DragDrop.DragOverEvent, DragOver);
 
         // Wire up View callbacks once DataContext is available
         DataContextChanged += (_, _) =>
@@ -128,7 +132,7 @@ public partial class MainWindow : Window
         {
             settings.ViewSize = vm.CurrentViewSize.ToString();
             settings.SortOrder = vm.CurrentSortOrder.ToString();
-            settings.Theme = vm.IsDarkTheme ? "Dark" : "Light";
+            settings.Theme = vm.CurrentThemeKey;
         }
 
         // Repository path is persisted via the OnRepositoryChanged callback
@@ -137,6 +141,29 @@ public partial class MainWindow : Window
         settings.RecentRepositories = savedSettings.RecentRepositories;
 
         return settings;
+    }
+
+    private async void About_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog();
+        await dialog.ShowDialog(this);
+    }
+
+    private void DragOver(object? sender, DragEventArgs e)
+    {
+        var files = e.DataTransfer.TryGetFiles();
+        if (files == null)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        var paths = files.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToArray();
+        bool hasValidItem = paths.Any(p =>
+            Directory.Exists(p!) ||
+            (File.Exists(p!) && AllowedExtensions.Contains(Path.GetExtension(p!))));
+
+        e.DragEffects = hasValidItem ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
     private async void Drop(object? sender, DragEventArgs e)
@@ -148,7 +175,7 @@ public partial class MainWindow : Window
             if (paths.Length == 0) return;
 
             var folders = paths.Where(p => Directory.Exists(p!)).ToArray();
-            var filePaths = paths.Where(p => File.Exists(p!)).ToArray();
+            var filePaths = paths.Where(p => File.Exists(p!) && AllowedExtensions.Contains(Path.GetExtension(p!))).ToArray();
 
             if (folders.Length > 0)
             {

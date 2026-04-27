@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="STLHub.App"
              xmlns:local="using:STLHub"
+             xmlns:sty="using:Avalonia.Styling"
              RequestedThemeVariant="Dark">
 
     <Application.DataTemplates>
@@ -69,6 +70,118 @@
                     <Color x:Key="DangerColor">#E81123</Color>
                     <Color x:Key="EditBorderColor">#0078D4</Color>
                     <Color x:Key="EditBg">#FFFFFF</Color>
+                </ResourceDictionary>
+
+                <!-- ═══════════ NORD THEME ═══════════ -->
+                <ResourceDictionary x:Key="{x:Static local:AppThemes.Nord}">
+                    <Color x:Key="ToolbarBg">#3B4252</Color>
+                    <Color x:Key="SidebarBg">#2E3440</Color>
+                    <Color x:Key="SidebarHeaderBg">#3B4252</Color>
+                    <Color x:Key="SidebarHoverBg">#434C5E</Color>
+                    <Color x:Key="SidebarActiveBg">#4C566A</Color>
+                    <Color x:Key="ContentBg">#2E3440</Color>
+                    <Color x:Key="DetailsBg">#3B4252</Color>
+                    <Color x:Key="CardBg">#3B4252</Color>
+                    <Color x:Key="CardThumbnailBg">#434C5E</Color>
+                    <Color x:Key="TagBg">#4C566A</Color>
+                    <Color x:Key="AccentColor">#5E81AC</Color>
+                    <Color x:Key="AccentHoverColor">#81A1C1</Color>
+                    <Color x:Key="ToolbarBtnBg">#434C5E</Color>
+                    <Color x:Key="ToolbarBtnHoverBg">#4C566A</Color>
+                    <Color x:Key="TextPrimary">#ECEFF4</Color>
+                    <Color x:Key="TextSecondary">#D8DEE9</Color>
+                    <Color x:Key="TextMuted">#4C566A</Color>
+                    <Color x:Key="TextOnAccent">#ECEFF4</Color>
+                    <Color x:Key="SeparatorColor">#4C566A</Color>
+                    <Color x:Key="BadgeBg">#CC2E3440</Color>
+                    <Color x:Key="BadgeText">#D8DEE9</Color>
+                    <Color x:Key="DangerColor">#BF616A</Color>
+                    <Color x:Key="EditBorderColor">#5E81AC</Color>
+                    <Color x:Key="EditBg">#434C5E</Color>
+                </ResourceDictionary>
+
+                <!-- ═══════════ DRACULA THEME ═══════════ -->
+                <ResourceDictionary x:Key="{x:Static local:AppThemes.Dracula}">
+                    <Color x:Key="ToolbarBg">#282A36</Color>
+                    <Color x:Key="SidebarBg">#21222C</Color>
+                    <Color x:Key="SidebarHeaderBg">#282A36</Color>
+                    <Color x:Key="SidebarHoverBg">#44475A</Color>
+                    <Color x:Key="SidebarActiveBg">#6272A4</Color>
+                    <Color x:Key="ContentBg">#1E1F29</Color>
+                    <Color x:Key="DetailsBg">#282A36</Color>
+                    <Color x:Key="CardBg">#282A36</Color>
+                    <Color x:Key="CardThumbnailBg">#44475A</Color>
+                    <Color x:Key="TagBg">#44475A</Color>
+                    <Color x:Key="AccentColor">#BD93F9</Color>
+                    <Color x:Key="AccentHoverColor">#FF79C6</Color>
+                    <Color x:Key="ToolbarBtnBg">#44475A</Color>
+                    <Color x:Key="ToolbarBtnHoverBg">#6272A4</Color>
+                    <Color x:Key="TextPrimary">#F8F8F2</Color>
+                    <Color x:Key="TextSecondary">#BFBFBF</Color>
+                    <Color x:Key="TextMuted">#6272A4</Color>
+                    <Color x:Key="TextOnAccent">#F8F8F2</Color>
+                    <Color x:Key="SeparatorColor">#44475A</Color>
+                    <Color x:Key="BadgeBg">#CC21222C</Color>
+                    <Color x:Key="BadgeText">#F8F8F2</Color>
+                    <Color x:Key="DangerColor">#FF5555</Color>
+                    <Color x:Key="EditBorderColor">#BD93F9</Color>
+                    <Color x:Key="EditBg">#44475A</Color>
+                </ResourceDictionary>
+
+                <!-- ═══════════ SOLARIZED DARK THEME ═══════════ -->
+                <ResourceDictionary x:Key="{x:Static local:AppThemes.SolarizedDark}">
+                    <Color x:Key="ToolbarBg">#073642</Color>
+                    <Color x:Key="SidebarBg">#002B36</Color>
+                    <Color x:Key="SidebarHeaderBg">#073642</Color>
+                    <Color x:Key="SidebarHoverBg">#0A4A5A</Color>
+                    <Color x:Key="SidebarActiveBg">#1A5A6A</Color>
+                    <Color x:Key="ContentBg">#002B36</Color>
+                    <Color x:Key="DetailsBg">#073642</Color>
+                    <Color x:Key="CardBg">#073642</Color>
+                    <Color x:Key="CardThumbnailBg">#0A4A5A</Color>
+                    <Color x:Key="TagBg">#586E75</Color>
+                    <Color x:Key="AccentColor">#268BD2</Color>
+                    <Color x:Key="AccentHoverColor">#2AA198</Color>
+                    <Color x:Key="ToolbarBtnBg">#0A4A5A</Color>
+                    <Color x:Key="ToolbarBtnHoverBg">#586E75</Color>
+                    <Color x:Key="TextPrimary">#FDF6E3</Color>
+                    <Color x:Key="TextSecondary">#93A1A1</Color>
+                    <Color x:Key="TextMuted">#586E75</Color>
+                    <Color x:Key="TextOnAccent">#FDF6E3</Color>
+                    <Color x:Key="SeparatorColor">#586E75</Color>
+                    <Color x:Key="BadgeBg">#CC002B36</Color>
+                    <Color x:Key="BadgeText">#93A1A1</Color>
+                    <Color x:Key="DangerColor">#DC322F</Color>
+                    <Color x:Key="EditBorderColor">#268BD2</Color>
+                    <Color x:Key="EditBg">#0A4A5A</Color>
+                </ResourceDictionary>
+
+                <!-- ═══════════ SOLARIZED LIGHT THEME ═══════════ -->
+                <ResourceDictionary x:Key="{x:Static local:AppThemes.SolarizedLight}">
+                    <Color x:Key="ToolbarBg">#EEE8D5</Color>
+                    <Color x:Key="SidebarBg">#FDF6E3</Color>
+                    <Color x:Key="SidebarHeaderBg">#EEE8D5</Color>
+                    <Color x:Key="SidebarHoverBg">#E6DFC8</Color>
+                    <Color x:Key="SidebarActiveBg">#D6CFBA</Color>
+                    <Color x:Key="ContentBg">#FDF6E3</Color>
+                    <Color x:Key="DetailsBg">#EEE8D5</Color>
+                    <Color x:Key="CardBg">#FDF6E3</Color>
+                    <Color x:Key="CardThumbnailBg">#EEE8D5</Color>
+                    <Color x:Key="TagBg">#EEE8D5</Color>
+                    <Color x:Key="AccentColor">#268BD2</Color>
+                    <Color x:Key="AccentHoverColor">#2AA198</Color>
+                    <Color x:Key="ToolbarBtnBg">#E6DFC8</Color>
+                    <Color x:Key="ToolbarBtnHoverBg">#D6CFBA</Color>
+                    <Color x:Key="TextPrimary">#073642</Color>
+                    <Color x:Key="TextSecondary">#586E75</Color>
+                    <Color x:Key="TextMuted">#93A1A1</Color>
+                    <Color x:Key="TextOnAccent">#FDF6E3</Color>
+                    <Color x:Key="SeparatorColor">#D6CFBA</Color>
+                    <Color x:Key="BadgeBg">#CCEEE8D5</Color>
+                    <Color x:Key="BadgeText">#586E75</Color>
+                    <Color x:Key="DangerColor">#DC322F</Color>
+                    <Color x:Key="EditBorderColor">#268BD2</Color>
+                    <Color x:Key="EditBg">#FDF6E3</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

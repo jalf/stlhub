@@ -30,6 +30,11 @@ public enum SortOrder { DateDesc, DateAsc, NameAsc, NameDesc }
 public record SortOption(string Label, SortOrder Value);
 
 /// <summary>
+/// Represents a labeled theme option for the UI ComboBox.
+/// </summary>
+public record ThemeOption(string Label, string Key);
+
+/// <summary>
 /// Main application view model. Manages the object library, categories, search,
 /// sorting, theme, and import operations.
 /// </summary>
@@ -76,8 +81,18 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private SortOrder _currentSortOrder = SortOrder.DateDesc;
 
+    public List<ThemeOption> ThemeOptions { get; } =
+    [
+        new("Escuro", "Dark"),
+        new("Claro", "Light"),
+        new("Nord", "Nord"),
+        new("Dracula", "Dracula"),
+        new("Solarizado Escuro", "SolarizedDark"),
+        new("Solarizado Claro", "SolarizedLight"),
+    ];
+
     [ObservableProperty]
-    private bool _isDarkTheme = true;
+    private ThemeOption _selectedThemeOption = null!;
 
     [ObservableProperty]
     private string _statusText = "Pronto";
@@ -86,11 +101,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isBusy;
 
     /// <summary>Callback to apply the theme at the application level.</summary>
-    public Action<bool>? ApplyTheme { get; set; }
+    public Action<string>? ApplyTheme { get; set; }
 
-    partial void OnIsDarkThemeChanged(bool value)
+    partial void OnSelectedThemeOptionChanged(ThemeOption value)
     {
-        ApplyTheme?.Invoke(value);
+        if (value is not null)
+            ApplyTheme?.Invoke(value.Key);
     }
 
     partial void OnCurrentSortOrderChanged(SortOrder value)
@@ -161,11 +177,7 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentSortOrder = value.Value;
     }
 
-    [RelayCommand]
-    private void ToggleTheme()
-    {
-        IsDarkTheme = !IsDarkTheme;
-    }
+    public string CurrentThemeKey => SelectedThemeOption?.Key ?? "Dark";
 
     public ObservableCollection<Object3D> Items { get; } = new();
     public ObservableCollection<Attachment> Attachments { get; } = new();
@@ -187,6 +199,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _repository = repository;
         _libraryManager = libraryManager;
         _selectedSortOption = SortOptions[0];
+        _selectedThemeOption = ThemeOptions[0];
         LoadCategories();
         LoadAllTags();
         LoadItems();
@@ -196,6 +209,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         // Design time constructor
         _selectedSortOption = SortOptions[0];
+        _selectedThemeOption = ThemeOptions[0];
     }
 
     public async Task SwitchRepository(string repoPath)

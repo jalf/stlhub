@@ -8,6 +8,7 @@ using STLHub.Data;
 using STLHub.Services;
 using System.IO;
 using System;
+using System.Linq;
 
 namespace STLHub;
 
@@ -43,22 +44,25 @@ public partial class App : Application
 
             var viewSize = Enum.TryParse<ViewSize>(settings.ViewSize, out var vs) ? vs : ViewSize.Medium;
             var sortOrder = Enum.TryParse<SortOrder>(settings.SortOrder, out var so) ? so : SortOrder.DateDesc;
-            var isDark = settings.Theme != "Light";
+            var themeKey = settings.Theme ?? "Dark";
 
             // Apply saved theme
-            Application.Current!.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
+            Application.Current!.RequestedThemeVariant = AppThemes.GetVariant(themeKey);
 
             var vm = new MainWindowViewModel(repository, libraryManager)
             {
                 CurrentViewSize = viewSize,
                 CurrentSortOrder = sortOrder,
                 CurrentRepositoryName = repoPath,
-                IsDarkTheme = isDark
             };
 
-            vm.ApplyTheme = (dark) =>
+            // Set the theme option without triggering ApplyTheme (callback not set yet)
+            var themeMatch = vm.ThemeOptions.FirstOrDefault(t => t.Key == themeKey) ?? vm.ThemeOptions[0];
+            vm.SelectedThemeOption = themeMatch;
+
+            vm.ApplyTheme = (key) =>
             {
-                Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+                Application.Current!.RequestedThemeVariant = AppThemes.GetVariant(key);
             };
 
             vm.OnRepositoryChanged = (newRepoPath) =>
