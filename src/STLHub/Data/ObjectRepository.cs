@@ -63,6 +63,13 @@ public class ObjectRepository
         connection.Execute("DELETE FROM Attachment WHERE Id = @Id", new { Id = attachmentId });
     }
 
+    public int CountAttachmentsByFilePath(string filePath)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.QuerySingle<int>(
+            "SELECT COUNT(*) FROM Attachment WHERE FilePath = @FilePath", new { FilePath = filePath });
+    }
+
     public Tag AddOrGetTag(string name)
     {
         using var connection = new SqliteConnection(_connectionString);

@@ -402,9 +402,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public async Task ImportFiles(string[] filePaths)
+    public async Task<List<Object3D>> ImportFiles(string[] filePaths)
     {
-        if (_libraryManager == null) return;
+        var importedObjects = new List<Object3D>();
+        if (_libraryManager == null) return importedObjects;
 
         IsBusy = true;
         int total = filePaths.Length;
@@ -418,7 +419,8 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 imported++;
                 StatusText = $"Importando {imported}/{total}: {Path.GetFileName(path)}";
-                await Task.Run(() => _libraryManager.ImportFile(path, categoryId));
+                var obj = await Task.Run(() => _libraryManager.ImportFile(path, categoryId));
+                if (obj != null) importedObjects.Add(obj);
             }
             LoadItems(SearchText);
             StatusText = $"{imported} objeto(s) importado(s)";
@@ -431,6 +433,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+
+        return importedObjects;
     }
 
     public (int objectsImported, int attachmentsImported, int? createdCategoryId) RunImportFolder(
@@ -463,6 +467,73 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             LoadAttachments();
             StatusText = $"{imported} arquivo(s) anexado(s)";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Erro ao anexar: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ImportAttachmentsToCategory(string[] filePaths, int categoryId)
+    {
+        if (_libraryManager == null || _repository == null) return;
+
+        var objects = _repository.GetAllObjects(categoryId: categoryId).ToList();
+        if (objects.Count == 0) return;
+
+        IsBusy = true;
+        int total = filePaths.Length;
+        int imported = 0;
+
+        try
+        {
+            foreach (var path in filePaths)
+            {
+                imported++;
+                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)} a {objects.Count} objeto(s)";
+                foreach (var obj in objects)
+                {
+                    await Task.Run(() => _libraryManager.ImportAttachment(obj.Id, path));
+                }
+            }
+            LoadAttachments();
+            StatusText = $"{imported} arquivo(s) anexado(s) a {objects.Count} objeto(s)";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Erro ao anexar: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ImportAttachmentsToObjects(string[] filePaths, List<Object3D> objects)
+    {
+        if (_libraryManager == null || objects.Count == 0) return;
+
+        IsBusy = true;
+        int total = filePaths.Length;
+        int imported = 0;
+
+        try
+        {
+            foreach (var path in filePaths)
+            {
+                imported++;
+                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)} a {objects.Count} objeto(s)";
+                foreach (var obj in objects)
+                {
+                    await Task.Run(() => _libraryManager.ImportAttachment(obj.Id, path));
+                }
+            }
+            LoadAttachments();
+            StatusText = $"{imported} arquivo(s) anexado(s) a {objects.Count} objeto(s)";
         }
         catch (Exception ex)
         {

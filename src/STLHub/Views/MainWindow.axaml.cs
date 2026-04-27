@@ -23,8 +23,6 @@ namespace STLHub.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".stl", ".3mf", ".obj" };
 
     public MainWindow()
     {
@@ -159,11 +157,26 @@ public partial class MainWindow : Window
         }
 
         var paths = files.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToArray();
-        bool hasValidItem = paths.Any(p =>
-            Directory.Exists(p!) ||
-            (File.Exists(p!) && AllowedExtensions.Contains(Path.GetExtension(p!))));
+        bool hasFolderOrFile = paths.Any(p => Directory.Exists(p!) || File.Exists(p!));
 
-        e.DragEffects = hasValidItem ? DragDropEffects.Copy : DragDropEffects.None;
+        if (!hasFolderOrFile)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        // If ALL files are non-3D (no folders, no 3D files), require a selected category
+        bool hasFolder = paths.Any(p => Directory.Exists(p!));
+        bool has3DFile = paths.Any(p =>
+            File.Exists(p!) && LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!)));
+
+        if (!hasFolder && !has3DFile && DataContext is MainWindowViewModel vm && vm.SelectedCategory == null)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        e.DragEffects = DragDropEffects.Copy;
     }
 
     private async void Drop(object? sender, DragEventArgs e)
@@ -175,16 +188,41 @@ public partial class MainWindow : Window
             if (paths.Length == 0) return;
 
             var folders = paths.Where(p => Directory.Exists(p!)).ToArray();
-            var filePaths = paths.Where(p => File.Exists(p!) && AllowedExtensions.Contains(Path.GetExtension(p!))).ToArray();
+            var object3DFiles = paths.Where(p => File.Exists(p!) && LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!))).ToArray();
+            var otherFiles = paths.Where(p => File.Exists(p!) && !LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!))).ToArray();
 
             if (folders.Length > 0)
             {
                 await ImportFoldersWithDialog(vm, folders!);
             }
 
-            if (filePaths.Length > 0)
+            if (object3DFiles.Length > 0 && otherFiles.Length > 0)
             {
-                await vm.ImportFiles(filePaths!);
+                // Mixed: import 3D first, then attach non-3D to the newly imported objects
+                var importedObjects = await vm.ImportFiles(object3DFiles!);
+                if (importedObjects.Count > 0)
+                {
+                    await vm.ImportAttachmentsToObjects(otherFiles!, importedObjects);
+                }
+            }
+            else if (object3DFiles.Length > 0)
+            {
+                await vm.ImportFiles(object3DFiles!);
+            }
+            else if (otherFiles.Length > 0 && vm.SelectedCategory != null)
+            {
+                // Non-3D only: confirm, then attach to all objects in the selected category
+                var categoryName = vm.SelectedCategory.Name;
+                var count = otherFiles.Length;
+                var message = $"Deseja anexar {count} arquivo(s) a todos os objetos da categoria \"{categoryName}\"?";
+
+                if (vm.ShowConfirmAsync != null)
+                {
+                    bool confirmed = await vm.ShowConfirmAsync("Anexar arquivos", message);
+                    if (!confirmed) return;
+                }
+
+                await vm.ImportAttachmentsToCategory(otherFiles!, vm.SelectedCategory.Category.Id);
             }
         }
     }

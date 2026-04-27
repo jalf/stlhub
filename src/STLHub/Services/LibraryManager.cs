@@ -67,7 +67,7 @@ public class LibraryManager
         return newObject;
     }
 
-    private static readonly HashSet<string> Object3DExtensions = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> Object3DExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".stl", ".3mf", ".obj" };
 
     /// <summary>
@@ -192,23 +192,36 @@ public class LibraryManager
     public void DeleteAttachment(Attachment attachment)
     {
         _repository.DeleteAttachment(attachment.Id);
-        try
+
+        // Only delete the physical file if no other attachment references it
+        if (_repository.CountAttachmentsByFilePath(attachment.FilePath) == 0)
         {
-            if (File.Exists(attachment.FilePath))
+            try
             {
-                File.Delete(attachment.FilePath);
+                if (File.Exists(attachment.FilePath))
+                {
+                    File.Delete(attachment.FilePath);
+                }
             }
+            catch { /* ignored */ }
         }
-        catch { /* ignored */ }
     }
 
     public void DeleteObject(Object3D obj)
     {
-        // Delete attachments files
-        var attachments = _repository.GetAttachments(obj.Id);
+        // Collect attachment file paths before removing from DB
+        var attachments = _repository.GetAttachments(obj.Id).ToList();
+
+        // Delete from database first (removes attachment records via cascade)
+        _repository.DeleteObject(obj.Id);
+
+        // Delete attachment files only if no other record references them
         foreach (var att in attachments)
         {
-            try { if (File.Exists(att.FilePath)) File.Delete(att.FilePath); } catch { }
+            if (_repository.CountAttachmentsByFilePath(att.FilePath) == 0)
+            {
+                try { if (File.Exists(att.FilePath)) File.Delete(att.FilePath); } catch { }
+            }
         }
 
         // Delete thumbnail
@@ -216,9 +229,6 @@ public class LibraryManager
 
         // Delete main file
         try { if (File.Exists(obj.MainFilePath)) File.Delete(obj.MainFilePath); } catch { }
-
-        // Delete from database
-        _repository.DeleteObject(obj.Id);
     }
 
     public string RegenerateThumbnail(Object3D obj)
