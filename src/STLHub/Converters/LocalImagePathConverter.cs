@@ -19,9 +19,9 @@ public class LocalImagePathConverter : IValueConverter
             try
             {
                 var ext = Path.GetExtension(path).ToLower();
-                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp")
+                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif")
                 {
-                    // To optimize, we could DecodeToWidth, but for MVP returning a Bitmap is fine
+                    // GIF: Avalonia suporta apenas o primeiro frame, mas para thumbnail está ok
                     return new Bitmap(path);
                 }
             }
