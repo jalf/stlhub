@@ -10,8 +10,21 @@ public partial class AboutDialog : Window
     public AboutDialog()
     {
         InitializeComponent();
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        VersionText.Text = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+        var informational = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (informational != null)
+        {
+            // Strip source commit hash appended by the SDK (e.g. "0.2.0+abc123")
+            var plusIndex = informational.IndexOf('+');
+            if (plusIndex > 0) informational = informational[..plusIndex];
+            VersionText.Text = $"v{informational}";
+        }
+        else
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            VersionText.Text = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "dev";
+        }
     }
 
     private void GitHubLink_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
