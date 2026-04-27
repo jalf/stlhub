@@ -198,6 +198,7 @@ public partial class MainWindow : Window
         {
             int totalObjects = 0;
             int totalAttachments = 0;
+            int? lastCreatedCategoryId = null;
 
             try
             {
@@ -214,6 +215,7 @@ public partial class MainWindow : Window
 
                     totalObjects += result.objectsImported;
                     totalAttachments += result.attachmentsImported;
+                    lastCreatedCategoryId = result.createdCategoryId ?? lastCreatedCategoryId;
                 }
 
                 if (dialog.CancellationToken.IsCancellationRequested)
@@ -232,7 +234,7 @@ public partial class MainWindow : Window
 
             Dispatcher.UIThread.Post(() =>
             {
-                vm.LoadCategories();
+                vm.LoadCategories(lastCreatedCategoryId);
                 vm.LoadItems(vm.SearchText);
             });
         });
