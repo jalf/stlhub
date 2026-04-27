@@ -152,7 +152,7 @@ public partial class MainWindow : Window
         var files = e.DataTransfer.TryGetFiles();
         if (files == null)
         {
-            e.DragEffects = DragDropEffects.None;
+            // Not a file drag (e.g. internal object/category move) — don't interfere
             return;
         }
 
@@ -348,6 +348,7 @@ public partial class MainWindow : Window
             if (sender is Control control && control.DataContext is Object3D obj)
             {
                 _draggedObject = obj;
+                _draggedCategory = null;
             }
         }
     }
