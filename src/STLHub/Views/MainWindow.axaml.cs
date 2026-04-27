@@ -328,6 +328,7 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             vm.SelectedCategory = null;
+            vm.SelectedTag = null;
         }
     }
 

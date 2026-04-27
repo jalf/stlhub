@@ -94,68 +94,61 @@ public class LibraryManager
         ref int objectsImported, ref int attachmentsImported,
         CancellationToken cancellationToken)
     {
-        // Only create a category if this folder (or any descendant) contains 3D files
-        if (!HasObject3DFiles(folderPath)) return;
         cancellationToken.ThrowIfCancellationRequested();
-
-        string folderName = Path.GetFileName(folderPath);
-        var category = new Category
-        {
-            Name = SanitizeName(folderName),
-            ParentCategoryId = parentCategoryId
-        };
-        _repository.AddCategory(category);
-        int categoryId = category.Id;
 
         // Separate files into 3D objects and potential attachments
         var allFiles = Directory.GetFiles(folderPath);
         var object3DFiles = allFiles.Where(f => Object3DExtensions.Contains(Path.GetExtension(f))).ToList();
         var otherFiles = allFiles.Where(f => !Object3DExtensions.Contains(Path.GetExtension(f))).ToList();
 
-        // Import 3D files
-        var importedObjects = new List<Object3D>();
-        foreach (var file in object3DFiles)
+        // Only create a category if this folder directly contains 3D files
+        int? categoryId = null;
+        if (object3DFiles.Count > 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            onProgress?.Invoke(Path.GetFileName(file));
-            var obj = ImportFile(file, categoryId);
-            if (obj != null)
+            string folderName = Path.GetFileName(folderPath);
+            var category = new Category
             {
-                importedObjects.Add(obj);
-                objectsImported++;
-                onCounts?.Invoke(objectsImported, attachmentsImported);
-            }
-        }
+                Name = SanitizeName(folderName),
+                ParentCategoryId = parentCategoryId
+            };
+            _repository.AddCategory(category);
+            categoryId = category.Id;
 
-        // Attach other files to imported 3D objects
-        if (importedObjects.Count > 0 && otherFiles.Count > 0)
-        {
-            foreach (var file in otherFiles)
+            // Import 3D files
+            var importedObjects = new List<Object3D>();
+            foreach (var file in object3DFiles)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 onProgress?.Invoke(Path.GetFileName(file));
-                ImportAttachment(importedObjects[0].Id, file);
-                attachmentsImported++;
-                onCounts?.Invoke(objectsImported, attachmentsImported);
+                var obj = ImportFile(file, categoryId);
+                if (obj != null)
+                {
+                    importedObjects.Add(obj);
+                    objectsImported++;
+                    onCounts?.Invoke(objectsImported, attachmentsImported);
+                }
+            }
+
+            // Attach other files to imported 3D objects
+            if (importedObjects.Count > 0 && otherFiles.Count > 0)
+            {
+                foreach (var file in otherFiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    onProgress?.Invoke(Path.GetFileName(file));
+                    ImportAttachment(importedObjects[0].Id, file);
+                    attachmentsImported++;
+                    onCounts?.Invoke(objectsImported, attachmentsImported);
+                }
             }
         }
 
-        // Recurse into sub-folders
+        // Recurse into sub-folders (use created category or keep parent)
         foreach (var subDir in Directory.GetDirectories(folderPath))
         {
-            ImportFolderRecursive(subDir, categoryId, onProgress, onCounts,
+            ImportFolderRecursive(subDir, categoryId ?? parentCategoryId, onProgress, onCounts,
                 ref objectsImported, ref attachmentsImported, cancellationToken);
         }
-    }
-
-    private static bool HasObject3DFiles(string folderPath)
-    {
-        // Check current folder
-        if (Directory.GetFiles(folderPath).Any(f => Object3DExtensions.Contains(Path.GetExtension(f))))
-            return true;
-
-        // Check descendants
-        return Directory.GetDirectories(folderPath).Any(HasObject3DFiles);
     }
 
     public Attachment? ImportAttachment(int objectId, string sourceFilePath)

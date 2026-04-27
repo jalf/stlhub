@@ -102,6 +102,19 @@ public class ObjectRepository
         connection.Execute(sql, new { ObjectId = objectId, TagId = tagId });
     }
 
+    public IEnumerable<Tag> GetAllTags()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.Query<Tag>("SELECT * FROM Tag ORDER BY Name");
+    }
+
+    public void DeleteTag(int tagId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Execute("DELETE FROM ObjectTag WHERE TagId = @Id", new { Id = tagId });
+        connection.Execute("DELETE FROM Tag WHERE Id = @Id", new { Id = tagId });
+    }
+
     public IEnumerable<Category> GetAllCategories()
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -171,9 +184,27 @@ public class ObjectRepository
         connection.Execute("UPDATE Object3D SET CategoryId = @CategoryId WHERE Id = @ObjectId", new { CategoryId = categoryId, ObjectId = objectId });
     }
 
-    public IEnumerable<Object3D> GetAllObjects(int? categoryId = null)
+    public IEnumerable<Object3D> GetAllObjects(int? categoryId = null, int? tagId = null)
     {
         using var connection = new SqliteConnection(_connectionString);
+        if (tagId.HasValue && categoryId.HasValue)
+        {
+            return connection.Query<Object3D>(
+                @"SELECT o.* FROM Object3D o
+                  INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
+                  WHERE o.CategoryId = @CategoryId AND ot.TagId = @TagId
+                  ORDER BY o.CreatedAt DESC",
+                new { CategoryId = categoryId.Value, TagId = tagId.Value });
+        }
+        if (tagId.HasValue)
+        {
+            return connection.Query<Object3D>(
+                @"SELECT o.* FROM Object3D o
+                  INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
+                  WHERE ot.TagId = @TagId
+                  ORDER BY o.CreatedAt DESC",
+                new { TagId = tagId.Value });
+        }
         if (categoryId.HasValue)
         {
             return connection.Query<Object3D>("SELECT * FROM Object3D WHERE CategoryId = @CategoryId ORDER BY CreatedAt DESC", new { CategoryId = categoryId.Value });
@@ -181,14 +212,36 @@ public class ObjectRepository
         return connection.Query<Object3D>("SELECT * FROM Object3D ORDER BY CreatedAt DESC");
     }
 
-    public IEnumerable<Object3D> SearchObjects(string searchTerm, int? categoryId = null)
+    public IEnumerable<Object3D> SearchObjects(string searchTerm, int? categoryId = null, int? tagId = null)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
-            return GetAllObjects(categoryId);
+            return GetAllObjects(categoryId, tagId);
 
         using var connection = new SqliteConnection(_connectionString);
         string term = "\"" + searchTerm.Replace("\"", "\"\"") + "\"*";
 
+        if (tagId.HasValue && categoryId.HasValue)
+        {
+            var sql = @"
+                SELECT o.* 
+                FROM Object3D o
+                JOIN Object3D_FTS f ON o.Id = f.rowid
+                INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
+                WHERE Object3D_FTS MATCH @Term AND o.CategoryId = @CategoryId AND ot.TagId = @TagId
+                ORDER BY rank;";
+            return connection.Query<Object3D>(sql, new { Term = term, CategoryId = categoryId.Value, TagId = tagId.Value });
+        }
+        if (tagId.HasValue)
+        {
+            var sql = @"
+                SELECT o.* 
+                FROM Object3D o
+                JOIN Object3D_FTS f ON o.Id = f.rowid
+                INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
+                WHERE Object3D_FTS MATCH @Term AND ot.TagId = @TagId
+                ORDER BY rank;";
+            return connection.Query<Object3D>(sql, new { Term = term, TagId = tagId.Value });
+        }
         if (categoryId.HasValue)
         {
             var sql = @"

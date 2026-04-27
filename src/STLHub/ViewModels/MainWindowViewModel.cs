@@ -171,6 +171,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<Attachment> Attachments { get; } = new();
     public ObservableCollection<Tag> ObjectTags { get; } = new();
     public ObservableCollection<CategoryNode> Categories { get; } = new();
+    public ObservableCollection<Tag> AllTags { get; } = new();
+
+    [ObservableProperty]
+    private Tag? _selectedTag;
 
     [ObservableProperty]
     private string _newTagName = string.Empty;
@@ -184,6 +188,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _libraryManager = libraryManager;
         _selectedSortOption = SortOptions[0];
         LoadCategories();
+        LoadAllTags();
         LoadItems();
     }
 
@@ -217,9 +222,11 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentRepositoryName = repoPath;
             SelectedObject = null;
             SelectedCategory = null;
+            SelectedTag = null;
             SearchText = string.Empty;
 
             LoadCategories();
+            LoadAllTags();
             LoadItems();
 
             OnRepositoryChanged?.Invoke(repoPath);
@@ -260,10 +267,18 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedCategoryChanged(CategoryNode? value)
     {
         OnPropertyChanged(nameof(IsAllObjectsSelected));
+        if (value != null) SelectedTag = null;
         LoadItems(SearchText);
     }
 
-    public bool IsAllObjectsSelected => SelectedCategory == null;
+    partial void OnSelectedTagChanged(Tag? value)
+    {
+        OnPropertyChanged(nameof(IsAllObjectsSelected));
+        if (value != null) SelectedCategory = null;
+        LoadItems(SearchText);
+    }
+
+    public bool IsAllObjectsSelected => SelectedCategory == null && SelectedTag == null;
 
     public void LoadCategories()
     {
@@ -278,7 +293,7 @@ public partial class MainWindowViewModel : ViewModelBase
             nodeLookup[cat.Id] = new CategoryNode(cat);
         }
 
-        foreach (var node in nodeLookup.Values)
+        foreach (var node in nodeLookup.Values.OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase))
         {
             if (node.Category.ParentCategoryId.HasValue && nodeLookup.TryGetValue(node.Category.ParentCategoryId.Value, out var parent))
             {
@@ -296,7 +311,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_repository == null) return;
         
         Items.Clear();
-        var results = _repository.SearchObjects(searchTerm, SelectedCategory?.Category.Id);
+        var results = _repository.SearchObjects(searchTerm, SelectedCategory?.Category.Id, SelectedTag?.Id);
         var sorted = CurrentSortOrder switch
         {
             SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
@@ -307,6 +322,17 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var item in sorted)
         {
             Items.Add(item);
+        }
+    }
+
+    public void LoadAllTags()
+    {
+        AllTags.Clear();
+        if (_repository == null) return;
+
+        foreach (var tag in _repository.GetAllTags())
+        {
+            AllTags.Add(tag);
         }
     }
 
@@ -453,6 +479,7 @@ public partial class MainWindowViewModel : ViewModelBase
         
         NewTagName = string.Empty;
         LoadTags();
+        LoadAllTags();
     }
 
     [RelayCommand]
@@ -463,6 +490,21 @@ public partial class MainWindowViewModel : ViewModelBase
             _repository.RemoveTagFromObject(SelectedObject.Id, tag.Id);
             LoadTags();
         }
+    }
+
+    [RelayCommand]
+    private void DeleteTagGlobal(Tag? tag)
+    {
+        if (tag == null || _repository == null) return;
+
+        _repository.DeleteTag(tag.Id);
+
+        if (SelectedTag?.Id == tag.Id)
+            SelectedTag = null;
+
+        LoadAllTags();
+        LoadTags();
+        LoadItems(SearchText);
     }
 
     [RelayCommand]

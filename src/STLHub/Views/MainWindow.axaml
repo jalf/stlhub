@@ -141,7 +141,7 @@
         <!-- ═══════════ SIDEBAR ═══════════ -->
         <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource SidebarBg}"
                 MinWidth="180" MaxWidth="500">
-            <Grid RowDefinitions="Auto, Auto, *">
+            <Grid RowDefinitions="Auto, Auto, Auto, *">
                 <!-- Header -->
                 <Border Grid.Row="0" Background="{DynamicResource SidebarHeaderBg}" Padding="14,10">
                     <TextBlock Text="EXPLORADOR" FontWeight="Bold" FontSize="11"
@@ -165,8 +165,60 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Tags Section -->
+                <Border Grid.Row="2" IsVisible="{Binding AllTags.Count}">
+                    <StackPanel>
+                        <Border Background="{DynamicResource SidebarHeaderBg}" Padding="14,8">
+                            <TextBlock Text="TAGS" FontWeight="Bold" FontSize="11"
+                                       Foreground="{DynamicResource TextSecondary}" LetterSpacing="1.5"/>
+                        </Border>
+                        <ListBox ItemsSource="{Binding AllTags}"
+                                 SelectedItem="{Binding SelectedTag}"
+                                 Background="Transparent" BorderThickness="0"
+                                 MaxHeight="200"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="{DynamicResource SidebarActiveBg}"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="14,6" Background="Transparent">
+                                        <Grid ColumnDefinitions="Auto, *, Auto">
+                                            <TextBlock Grid.Column="0" Text="🏷" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource TextPrimary}"/>
+                                            <Button Grid.Column="2"
+                                                    Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteTagGlobalCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="Transparent" Padding="2" Margin="0"
+                                                    Width="18" Height="18" CornerRadius="9"
+                                                    ToolTip.Tip="Remover tag">
+                                                <TextBlock Text="✕" FontSize="9" Foreground="{DynamicResource DangerColor}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+
                 <!-- Category Tree -->
-                <DockPanel Grid.Row="2">
+                <DockPanel Grid.Row="3">
                     <Border DockPanel.Dock="Top" Padding="14,8" Background="Transparent" Cursor="Hand" PointerPressed="AddRootCategory_PointerPressed">
                         <Border.Styles>
                             <Style Selector="Border:pointerover">
