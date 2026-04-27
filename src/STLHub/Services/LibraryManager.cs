@@ -74,7 +74,7 @@ public class LibraryManager
     /// Imports a folder recursively: sub-folders become categories, 3D files become objects,
     /// and remaining files are attached to the 3D objects in the same folder.
     /// </summary>
-    public (int objectsImported, int attachmentsImported) ImportFolder(
+    public (int objectsImported, int attachmentsImported, int? createdCategoryId) ImportFolder(
         string folderPath, int? parentCategoryId,
         Action<string>? onProgress = null,
         Action<int, int>? onCounts = null,
@@ -82,16 +82,18 @@ public class LibraryManager
     {
         int objectsImported = 0;
         int attachmentsImported = 0;
+        int? firstCreatedCategoryId = null;
 
         ImportFolderRecursive(folderPath, parentCategoryId, onProgress, onCounts,
-            ref objectsImported, ref attachmentsImported, cancellationToken);
+            ref objectsImported, ref attachmentsImported, ref firstCreatedCategoryId, cancellationToken);
 
-        return (objectsImported, attachmentsImported);
+        return (objectsImported, attachmentsImported, firstCreatedCategoryId);
     }
 
     private void ImportFolderRecursive(string folderPath, int? parentCategoryId,
         Action<string>? onProgress, Action<int, int>? onCounts,
         ref int objectsImported, ref int attachmentsImported,
+        ref int? firstCreatedCategoryId,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -113,6 +115,7 @@ public class LibraryManager
             };
             _repository.AddCategory(category);
             categoryId = category.Id;
+            firstCreatedCategoryId ??= category.Id;
 
             // Import 3D files
             var importedObjects = new List<Object3D>();
@@ -129,14 +132,17 @@ public class LibraryManager
                 }
             }
 
-            // Attach other files to imported 3D objects
+            // Attach other files to all imported 3D objects
             if (importedObjects.Count > 0 && otherFiles.Count > 0)
             {
                 foreach (var file in otherFiles)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(Path.GetFileName(file));
-                    ImportAttachment(importedObjects[0].Id, file);
+                    foreach (var obj in importedObjects)
+                    {
+                        ImportAttachment(obj.Id, file);
+                    }
                     attachmentsImported++;
                     onCounts?.Invoke(objectsImported, attachmentsImported);
                 }
@@ -147,7 +153,7 @@ public class LibraryManager
         foreach (var subDir in Directory.GetDirectories(folderPath))
         {
             ImportFolderRecursive(subDir, categoryId ?? parentCategoryId, onProgress, onCounts,
-                ref objectsImported, ref attachmentsImported, cancellationToken);
+                ref objectsImported, ref attachmentsImported, ref firstCreatedCategoryId, cancellationToken);
         }
     }
 

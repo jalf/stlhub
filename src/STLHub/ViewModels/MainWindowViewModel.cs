@@ -294,7 +294,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool IsAllObjectsSelected => SelectedCategory == null && SelectedTag == null;
 
-    public void LoadCategories()
+    public void LoadCategories(int? selectCategoryId = null)
     {
         var expandedIds = new HashSet<int>();
         CollectExpandedIds(Categories, expandedIds);
@@ -323,6 +323,18 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 Categories.Add(node);
             }
+        }
+
+        if (selectCategoryId.HasValue && nodeLookup.TryGetValue(selectCategoryId.Value, out var targetNode))
+        {
+            var current = targetNode;
+            while (current.Category.ParentCategoryId.HasValue &&
+                   nodeLookup.TryGetValue(current.Category.ParentCategoryId.Value, out var parentNode))
+            {
+                parentNode.IsExpanded = true;
+                current = parentNode;
+            }
+            SelectedCategory = targetNode;
         }
     }
 
@@ -421,13 +433,13 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public (int objectsImported, int attachmentsImported) RunImportFolder(
+    public (int objectsImported, int attachmentsImported, int? createdCategoryId) RunImportFolder(
         string folderPath,
         Action<string>? onProgress = null,
         Action<int, int>? onCounts = null,
         CancellationToken cancellationToken = default)
     {
-        if (_libraryManager == null) return (0, 0);
+        if (_libraryManager == null) return (0, 0, null);
         var parentCategoryId = SelectedCategory?.Category.Id;
         return _libraryManager.ImportFolder(folderPath, parentCategoryId,
             onProgress, onCounts, cancellationToken);
