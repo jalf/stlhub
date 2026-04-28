@@ -98,8 +98,7 @@ public static class ThumbnailGenerator
             {
                 entry = archive.Entries
                     .Where(e => e.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(e => e.Length)
-                    .FirstOrDefault();
+                    .MaxBy(e => e.Length);
             }
 
             if (entry == null) return false;

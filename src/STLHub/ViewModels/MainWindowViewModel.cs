@@ -418,12 +418,27 @@ public partial class MainWindowViewModel : ViewModelBase
             SortOrder.NameDesc => results.OrderByDescending(o => o.Name, StringComparer.OrdinalIgnoreCase),
             _ => results.OrderByDescending(o => o.CreatedAt)
         };
+        var categoryMap = BuildCategoryNameMap();
         foreach (var item in sorted)
         {
-            // Preencher CategoryName
-            item.CategoryName = GetCategoryName(item.CategoryId);
+            item.CategoryName = item.CategoryId.HasValue && categoryMap.TryGetValue(item.CategoryId.Value, out var catName) ? catName : null;
             Items.Add(item);
         }
+    }
+
+    private Dictionary<int, string> BuildCategoryNameMap()
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var node in Categories)
+            FlattenCategoryNode(node, map);
+        return map;
+    }
+
+    private static void FlattenCategoryNode(CategoryNode node, Dictionary<int, string> map)
+    {
+        map[node.Category.Id] = node.Name;
+        foreach (var child in node.Children)
+            FlattenCategoryNode(child, map);
     }
 
     // Recursively collect all IDs from a category and its children

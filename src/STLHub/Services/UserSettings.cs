@@ -29,7 +29,7 @@ public class UserSettings
         RecentRepositories.Remove(path);
         RecentRepositories.Insert(0, path);
         if (RecentRepositories.Count > 10)
-            RecentRepositories = RecentRepositories.Take(10).ToList();
+            RecentRepositories.RemoveRange(10, RecentRepositories.Count - 10);
         LastRepositoryPath = path;
     }
 

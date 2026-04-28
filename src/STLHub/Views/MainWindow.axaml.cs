@@ -157,19 +157,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        var paths = files.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToArray();
-        bool hasFolderOrFile = paths.Any(p => Directory.Exists(p!) || File.Exists(p!));
-
-        if (!hasFolderOrFile)
+        bool hasFolderOrFile = false, hasFolder = false, has3DFile = false;
+        foreach (var f in files)
         {
-            e.DragEffects = DragDropEffects.None;
-            return;
+            var p = f.TryGetLocalPath();
+            if (p == null) continue;
+            if (Directory.Exists(p)) { hasFolder = true; hasFolderOrFile = true; }
+            else if (File.Exists(p)) { hasFolderOrFile = true; if (LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p))) has3DFile = true; }
         }
 
-        // If ALL files are non-3D (no folders, no 3D files), require a selected category
-        bool hasFolder = paths.Any(p => Directory.Exists(p!));
-        bool has3DFile = paths.Any(p =>
-            File.Exists(p!) && LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!)));
+        if (!hasFolderOrFile) { e.DragEffects = DragDropEffects.None; return; }
 
         if (!hasFolder && !has3DFile && DataContext is MainWindowViewModel vm && vm.SelectedCategory == null)
         {
@@ -185,36 +182,47 @@ public partial class MainWindow : Window
         var files = e.DataTransfer.TryGetFiles();
         if (files != null && DataContext is MainWindowViewModel vm)
         {
-            var paths = files.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToArray();
-            if (paths.Length == 0) return;
-
-            var folders = paths.Where(p => Directory.Exists(p!)).ToArray();
-            var object3DFiles = paths.Where(p => File.Exists(p!) && LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!))).ToArray();
-            var otherFiles = paths.Where(p => File.Exists(p!) && !LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p!))).ToArray();
-
-            if (folders.Length > 0)
+            var folders = new List<string>();
+            var object3DFiles = new List<string>();
+            var otherFiles = new List<string>();
+            foreach (var f in files)
             {
-                await ImportFoldersWithDialog(vm, folders!);
-            }
-
-            if (object3DFiles.Length > 0 && otherFiles.Length > 0)
-            {
-                // Mixed: import 3D first, then attach non-3D to the newly imported objects
-                var importedObjects = await vm.ImportFiles(object3DFiles!);
-                if (importedObjects.Count > 0)
+                var p = f.TryGetLocalPath();
+                if (p == null) continue;
+                if (Directory.Exists(p)) folders.Add(p);
+                else if (File.Exists(p))
                 {
-                    await vm.ImportAttachmentsToObjects(otherFiles!, importedObjects);
+                    if (LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p)))
+                        object3DFiles.Add(p);
+                    else
+                        otherFiles.Add(p);
                 }
             }
-            else if (object3DFiles.Length > 0)
+            if (folders.Count == 0 && object3DFiles.Count == 0 && otherFiles.Count == 0) return;
+
+            if (folders.Count > 0)
             {
-                await vm.ImportFiles(object3DFiles!);
+                await ImportFoldersWithDialog(vm, folders);
             }
-            else if (otherFiles.Length > 0 && vm.SelectedCategory != null)
+
+            if (object3DFiles.Count > 0 && otherFiles.Count > 0)
+            {
+                // Mixed: import 3D first, then attach non-3D to the newly imported objects
+                var importedObjects = await vm.ImportFiles([.. object3DFiles]);
+                if (importedObjects.Count > 0)
+                {
+                    await vm.ImportAttachmentsToObjects([.. otherFiles], importedObjects);
+                }
+            }
+            else if (object3DFiles.Count > 0)
+            {
+                await vm.ImportFiles([.. object3DFiles]);
+            }
+            else if (otherFiles.Count > 0 && vm.SelectedCategory != null)
             {
                 // Non-3D only: confirm, then attach to all objects in the selected category
                 var categoryName = vm.SelectedCategory.Name;
-                var count = otherFiles.Length;
+                var count = otherFiles.Count;
                 var message = $"Deseja anexar {count} arquivo(s) a todos os objetos da categoria \"{categoryName}\"?";
 
                 if (vm.ShowConfirmAsync != null)
@@ -223,12 +231,12 @@ public partial class MainWindow : Window
                     if (!confirmed) return;
                 }
 
-                await vm.ImportAttachmentsToCategory(otherFiles!, vm.SelectedCategory.Category.Id);
+                await vm.ImportAttachmentsToCategory([.. otherFiles], vm.SelectedCategory.Category.Id);
             }
         }
     }
 
-    private async Task ImportFoldersWithDialog(MainWindowViewModel vm, string?[] folders)
+    private async Task ImportFoldersWithDialog(MainWindowViewModel vm, List<string> folders)
     {
         var dialog = new ImportProgressDialog();
         var dialogTask = dialog.ShowDialog(this);
@@ -243,7 +251,6 @@ public partial class MainWindow : Window
             {
                 foreach (var folder in folders)
                 {
-                    if (folder == null) continue;
                     dialog.CancellationToken.ThrowIfCancellationRequested();
 
                     var result = vm.RunImportFolder(
@@ -684,7 +691,17 @@ public partial class MainWindow : Window
         var prevBitmaps = _carouselBitmaps;
         StopCarousel();
         if (prevImage != null && prevBitmaps.Count > 0)
+        {
             prevImage.Source = prevBitmaps[0];
+            // bitmap[0] stays alive via Image.Source; dispose the extra frames
+            for (int i = 1; i < prevBitmaps.Count; i++)
+                prevBitmaps[i]?.Dispose();
+        }
+        else
+        {
+            foreach (var bmp in prevBitmaps)
+                bmp?.Dispose();
+        }
     }
 
     private void StopCarousel()

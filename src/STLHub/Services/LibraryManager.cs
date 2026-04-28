@@ -98,10 +98,12 @@ public class LibraryManager
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Separate files into 3D objects and potential attachments
+        // Separate files into 3D objects and potential attachments (single pass)
         var allFiles = Directory.GetFiles(folderPath);
-        var object3DFiles = allFiles.Where(f => Object3DExtensions.Contains(Path.GetExtension(f))).ToList();
-        var otherFiles = allFiles.Where(f => !Object3DExtensions.Contains(Path.GetExtension(f))).ToList();
+        var object3DFiles = new List<string>(allFiles.Length);
+        var otherFiles = new List<string>(allFiles.Length);
+        foreach (var f in allFiles)
+            (Object3DExtensions.Contains(Path.GetExtension(f)) ? object3DFiles : otherFiles).Add(f);
 
         // Only create a category if this folder directly contains 3D files
         int? categoryId = null;
