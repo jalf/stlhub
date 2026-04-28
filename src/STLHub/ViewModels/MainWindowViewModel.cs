@@ -16,6 +16,14 @@ namespace STLHub.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    /// <summary>
+    /// Clears the search text box.
+    /// </summary>
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+    }
     // ...existing code...
 
     /// <summary>

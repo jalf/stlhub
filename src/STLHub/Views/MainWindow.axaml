@@ -56,10 +56,32 @@
                 </StackPanel>
 
                 <!-- Search -->
-                <TextBox Grid.Column="1" Text="{Binding SearchText, Mode=TwoWay}"
-                         PlaceholderText="Buscar objetos..." Width="380"
-                         HorizontalAlignment="Center" CornerRadius="16" Padding="14,7"
-                         FontSize="13"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                    <Grid Width="380" Height="38">
+                        <TextBox x:Name="SearchBox"
+                                 Text="{Binding SearchText, Mode=TwoWay}"
+                                 PlaceholderText="Buscar objetos..."
+                                 CornerRadius="16" Padding="14,7,38,7"
+                                 FontSize="13"
+                                 VerticalAlignment="Center"
+                                 HorizontalAlignment="Stretch"/>
+                        <Button Command="{Binding ClearSearchCommand}"
+                                Width="28" Height="28"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Margin="0,0,6,0"
+                                Background="Transparent" BorderBrush="Transparent"
+                                ToolTip.Tip="Limpar busca">
+                            <Viewbox Stretch="Uniform" Width="14" Height="14">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="M6,6 L18,18 M6,18 L18,6"
+                                          Stroke="{DynamicResource TextSecondary}"
+                                          StrokeThickness="2"
+                                          StrokeLineCap="Round"/>
+                                </Canvas>
+                            </Viewbox>
+                        </Button>
+                    </Grid>
+                </StackPanel>
 
                 <!-- Controls -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
