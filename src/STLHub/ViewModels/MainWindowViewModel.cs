@@ -14,7 +14,33 @@ using STLHub.Services;
 
 namespace STLHub.ViewModels;
 
-/// <summary>
+public partial class MainWindowViewModel : ViewModelBase
+{
+    // ...existing code...
+
+    /// <summary>
+    /// Retorna o nome da categoria para um objeto dado seu CategoryId.
+    /// </summary>
+    public string? GetCategoryName(int? categoryId)
+    {
+        if (!categoryId.HasValue) return null;
+        var cat = Categories.Select(n => FindCategoryById(n, categoryId.Value)).FirstOrDefault(c => c != null);
+        return cat?.Name;
+    }
+
+    private CategoryNode? FindCategoryById(CategoryNode node, int id)
+    {
+        if (node.Category.Id == id) return node;
+        foreach (var child in node.Children)
+        {
+            var found = FindCategoryById(child, id);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    // ...existing code...
+}
 /// Supported grid view sizes for the object card display.
 /// </summary>
 public enum ViewSize { Small, Medium, Large }
@@ -363,6 +389,8 @@ public partial class MainWindowViewModel : ViewModelBase
         };
         foreach (var item in sorted)
         {
+            // Preencher CategoryName
+            item.CategoryName = GetCategoryName(item.CategoryId);
             Items.Add(item);
         }
     }

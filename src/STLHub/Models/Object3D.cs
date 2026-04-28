@@ -1,3 +1,4 @@
+
 using System;
 
 namespace STLHub.Models;
@@ -7,6 +8,8 @@ namespace STLHub.Models;
 /// </summary>
 public class Object3D
 {
+    // Propriedade auxiliar para exibição (não mapeada no banco)
+    public string? CategoryName { get; set; }
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

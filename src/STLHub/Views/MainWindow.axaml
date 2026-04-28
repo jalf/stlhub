@@ -466,10 +466,22 @@
                                     </Border>
                                     <!-- Name -->
                                     <StackPanel Grid.Row="1" Margin="10,6,10,8">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                   FontSize="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardFontSize}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <StackPanel Spacing="4">
+                                            <!-- Categoria como badge alinhada à direita -->
+                                            <Border Background="{DynamicResource BadgeBg}"
+                                                    Padding="8,2" CornerRadius="8" HorizontalAlignment="Right"
+                                                    IsVisible="{Binding CategoryName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Text="{Binding CategoryName}" FontSize="10" FontWeight="Bold"
+                                                           Foreground="{DynamicResource BadgeText}"/>
+                                            </Border>
+                                            <!-- Nome do objeto -->
+                                            <TextBlock
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource TextPrimary}"
+                                                TextTrimming="CharacterEllipsis"
+                                                FontSize="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardFontSize}"
+                                                Text="{Binding Name}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Grid>
                             </Border>
