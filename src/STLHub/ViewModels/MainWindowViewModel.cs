@@ -377,9 +377,31 @@ public partial class MainWindowViewModel : ViewModelBase
     public void LoadItems(string searchTerm = "")
     {
         if (_repository == null) return;
-        
+
         Items.Clear();
-        var results = _repository.SearchObjects(searchTerm, SelectedCategory?.Category.Id, SelectedTag?.Id);
+
+        IEnumerable<Object3D> results;
+        if (SelectedCategory != null)
+        {
+            // Collect all IDs from the selected category and its children
+            var categoryIds = new List<int>();
+            CollectCategoryAndChildrenIds(SelectedCategory, categoryIds);
+            results = _repository.GetAllObjects()
+                .Where(o => o.CategoryId.HasValue && categoryIds.Contains(o.CategoryId.Value));
+            // Apply search filter if needed
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                results = results.Where(o =>
+                    (o.Name?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (o.Description?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0)
+                );
+            }
+        }
+        else
+        {
+            results = _repository.SearchObjects(searchTerm, null, SelectedTag?.Id);
+        }
+
         var sorted = CurrentSortOrder switch
         {
             SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
@@ -393,6 +415,14 @@ public partial class MainWindowViewModel : ViewModelBase
             item.CategoryName = GetCategoryName(item.CategoryId);
             Items.Add(item);
         }
+    }
+
+    // Recursively collect all IDs from a category and its children
+    private void CollectCategoryAndChildrenIds(CategoryNode node, List<int> ids)
+    {
+        ids.Add(node.Category.Id);
+        foreach (var child in node.Children)
+            CollectCategoryAndChildrenIds(child, ids);
     }
 
     public void LoadAllTags()
