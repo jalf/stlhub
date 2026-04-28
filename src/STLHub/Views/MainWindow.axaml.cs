@@ -59,6 +59,18 @@ public partial class MainWindow : Window
                     return folders.FirstOrDefault()?.TryGetLocalPath();
                 };
 
+                vm.FocusCategoryEditBox = () =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        var textBox = CategoryTree.GetVisualDescendants()
+                            .OfType<TextBox>()
+                            .FirstOrDefault(tb => tb.Name == "CategoryRenameBox" && tb.IsVisible);
+                        textBox?.Focus();
+                        textBox?.SelectAll();
+                    }, DispatcherPriority.Input);
+                };
+
                 vm.PropertyChanged += (_, args) =>
                 {
                     if (args.PropertyName == nameof(vm.IsAllObjectsSelected))

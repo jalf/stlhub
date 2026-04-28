@@ -90,6 +90,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Callback invoked when the repository changes, to persist settings.</summary>
     public Action<string>? OnRepositoryChanged { get; set; }
 
+    /// <summary>Callback set by the View to focus and select the active category rename TextBox.</summary>
+    public Action? FocusCategoryEditBox { get; set; }
+
     [ObservableProperty]
     private string _searchText = string.Empty;
 
@@ -714,18 +717,32 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void AddRootCategory()
     {
-        var cat = new Category { Name = "Nova Categoria Raiz" };
+        var cat = new Category { Name = "Nova Categoria" };
         _repository?.AddCategory(cat);
         LoadCategories();
+        var node = FindCategoryNode(Categories, cat.Id);
+        if (node != null)
+        {
+            SelectedCategory = node;
+            node.IsEditing = true;
+            FocusCategoryEditBox?.Invoke();
+        }
     }
 
     [RelayCommand]
     private void AddSubCategory(CategoryNode? parent)
     {
         if (parent == null) return;
-        var cat = new Category { Name = "Nova Subcategoria", ParentCategoryId = parent.Category.Id };
+        var cat = new Category { Name = "Nova Categoria", ParentCategoryId = parent.Category.Id };
         _repository?.AddCategory(cat);
         LoadCategories();
+        var node = FindCategoryNode(Categories, cat.Id);
+        if (node != null)
+        {
+            SelectedCategory = node;
+            node.IsEditing = true;
+            FocusCategoryEditBox?.Invoke();
+        }
     }
 
     [RelayCommand]

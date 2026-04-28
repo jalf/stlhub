@@ -170,15 +170,9 @@
         <!-- ═══════════ SIDEBAR ═══════════ -->
         <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource SidebarBg}"
                 MinWidth="180" MaxWidth="500">
-            <Grid RowDefinitions="Auto, Auto, Auto, *">
-                <!-- Header -->
-                <Border Grid.Row="0" Background="{DynamicResource SidebarHeaderBg}" Padding="14,10">
-                    <TextBlock Text="EXPLORADOR" FontWeight="Bold" FontSize="11"
-                               Foreground="{DynamicResource TextSecondary}" LetterSpacing="1.5"/>
-                </Border>
-
+            <Grid RowDefinitions="Auto, Auto, *">
                 <!-- "All Objects" -->
-                <Border Grid.Row="1" Cursor="Hand" PointerPressed="AllObjects_PointerPressed"
+                <Border Grid.Row="0" Cursor="Hand" PointerPressed="AllObjects_PointerPressed"
                         Padding="14,10" Name="AllObjectsBorder"
                         Background="Transparent"
                         DragDrop.AllowDrop="True"
@@ -198,7 +192,7 @@
                 </Border>
 
                 <!-- Tags Section -->
-                <Border Grid.Row="2" IsVisible="{Binding AllTags.Count}">
+                <Border Grid.Row="1" IsVisible="{Binding AllTags.Count}">
                     <StackPanel>
                         <Border Background="{DynamicResource SidebarHeaderBg}" Padding="14,8">
                             <TextBlock Text="TAGS" FontWeight="Bold" FontSize="11"
@@ -250,7 +244,11 @@
                 </Border>
 
                 <!-- Category Tree -->
-                <DockPanel Grid.Row="3">
+                <DockPanel Grid.Row="2">
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource SidebarHeaderBg}" Padding="14,8">
+                        <TextBlock Text="CATEGORIAS" FontWeight="Bold" FontSize="11"
+                                   Foreground="{DynamicResource TextSecondary}" LetterSpacing="1.5"/>
+                    </Border>
                     <Border DockPanel.Dock="Top" Padding="14,8" Background="Transparent" Cursor="Hand" PointerPressed="AddRootCategory_PointerPressed">
                         <Border.Styles>
                             <Style Selector="Border:pointerover">
@@ -259,7 +257,7 @@
                         </Border.Styles>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="+" FontSize="16" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Nova Pasta" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Nova Categoria" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -441,9 +439,12 @@
                            RenderOptions.BitmapInterpolationMode="HighQuality"/>
                 </StackPanel>
                 <!-- Object Cards -->
-                <ScrollViewer Padding="16">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <Border Padding="16">
                 <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedObject}"
-                         Background="Transparent" BorderThickness="0">
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel />
@@ -512,6 +513,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+                </Border>
             </ScrollViewer>
             </Panel>
         </Border>
