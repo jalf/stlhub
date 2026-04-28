@@ -4,9 +4,9 @@
         Title="Thumbnail"
         Width="600" Height="600"
         WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e">
+        Background="{DynamicResource ContentBg}">
 
-    <Border Background="#1e1e1e" Padding="0">
+    <Border Background="{DynamicResource ContentBg}" Padding="0">
         <Image x:Name="ViewerImage"
                Stretch="Uniform"
                HorizontalAlignment="Center"
