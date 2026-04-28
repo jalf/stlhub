@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using STLHub.Converters;
 using STLHub.Data;
 using STLHub.Models;
 using STLHub.Services;
@@ -454,6 +455,15 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Attachments.Add(att);
         }
+    }
+
+    public IEnumerable<string> GetImageAttachmentPaths(int objectId)
+    {
+        if (_repository == null) return [];
+        return _repository.GetAttachments(objectId)
+            .Where(a => LocalImagePathConverter.SupportedExtensions.Contains(Path.GetExtension(a.FilePath))
+                     && File.Exists(a.FilePath))
+            .Select(a => a.FilePath);
     }
 
     public void LoadTags()

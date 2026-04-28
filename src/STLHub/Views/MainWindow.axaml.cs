@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -610,5 +611,94 @@ public partial class MainWindow : Window
             vm.StatusText = _savedStatusText;
             _savedStatusText = null;
         }
+    }
+
+    // ── Thumbnail carousel on hover ───────────────────────────────────────────
+
+    private readonly Dictionary<int, List<string>> _carouselPathCache = new();
+    private DispatcherTimer? _carouselTimer;
+    private Image? _carouselImage;
+    private List<Bitmap?> _carouselBitmaps = [];
+    private int _carouselIndex;
+    private int _hoverObjectId = -1;
+
+    private async void ThumbnailBorder_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is not Border border || border.DataContext is not Object3D obj) return;
+
+        var image = (border.Child as Panel)?.Children.OfType<Image>().FirstOrDefault();
+        if (image == null) return;
+
+        // PointerExited may not have fired when the mouse moves fast between cards.
+        RestoreCarousel();
+        _hoverObjectId = obj.Id;
+
+        if (!_carouselPathCache.TryGetValue(obj.Id, out var paths))
+        {
+            var vm = DataContext as MainWindowViewModel;
+            var thumbnailPath = obj.ThumbnailPath;
+            var objectId = obj.Id;
+
+            paths = await Task.Run(() =>
+            {
+                var result = new List<string>();
+                if (!string.IsNullOrEmpty(thumbnailPath) && File.Exists(thumbnailPath))
+                    result.Add(thumbnailPath);
+                if (vm != null)
+                    result.AddRange(vm.GetImageAttachmentPaths(objectId));
+                return result;
+            });
+
+            _carouselPathCache[obj.Id] = paths;
+        }
+
+        if (_hoverObjectId != obj.Id || paths.Count <= 1) return;
+
+        var bitmaps = await Task.Run(() => paths.Select(LoadBitmapSafe).ToList());
+
+        if (_hoverObjectId != obj.Id || bitmaps.Count <= 1) return;
+
+        _carouselImage = image;
+        _carouselBitmaps = bitmaps;
+        _carouselIndex = 0;
+
+        _carouselTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _carouselTimer.Tick += (_, _) =>
+        {
+            if (_carouselImage == null || _carouselBitmaps.Count == 0) return;
+            _carouselIndex = (_carouselIndex + 1) % _carouselBitmaps.Count;
+            _carouselImage.Source = _carouselBitmaps[_carouselIndex];
+        };
+        _carouselTimer.Start();
+    }
+
+    private void ThumbnailBorder_PointerExited(object? sender, PointerEventArgs e)
+    {
+        _hoverObjectId = -1;
+        RestoreCarousel();
+    }
+
+    private void RestoreCarousel()
+    {
+        var prevImage = _carouselImage;
+        var prevBitmaps = _carouselBitmaps;
+        StopCarousel();
+        if (prevImage != null && prevBitmaps.Count > 0)
+            prevImage.Source = prevBitmaps[0];
+    }
+
+    private void StopCarousel()
+    {
+        _carouselTimer?.Stop();
+        _carouselTimer = null;
+        _carouselImage = null;
+        _carouselBitmaps = [];
+        _carouselIndex = 0;
+    }
+
+    private static Bitmap? LoadBitmapSafe(string path)
+    {
+        try { return new Bitmap(path); }
+        catch { return null; }
     }
 }

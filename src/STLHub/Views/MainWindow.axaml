@@ -473,7 +473,9 @@
                                     <!-- Thumbnail -->
                                     <Border Grid.Row="0" CornerRadius="10,10,0,0" ClipToBounds="True"
                                             Background="{DynamicResource CardThumbnailBg}"
-                                            Height="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).ThumbnailHeight}">
+                                            Height="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).ThumbnailHeight}"
+                                            PointerEntered="ThumbnailBorder_PointerEntered"
+                                            PointerExited="ThumbnailBorder_PointerExited">
                                         <Panel>
                                             <Image Source="{Binding ThumbnailPath, Converter={StaticResource LocalImagePathConverter}}"
                                                    Stretch="UniformToFill"
