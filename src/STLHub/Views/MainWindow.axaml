@@ -247,7 +247,7 @@
                               Background="{DynamicResource SidebarBg}"
                               BorderThickness="0"
                               Padding="0"
-                              Margin="0">
+                              Margin="0,0,0,0">
                         <TreeView.Template>
                             <ControlTemplate>
                                 <Border Background="{TemplateBinding Background}"
@@ -274,10 +274,10 @@
                         <TreeView.ItemContainerTheme>
                             <ControlTheme TargetType="TreeViewItem">
                                 <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,0"/>
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TreeViewItemForeground}"/>
-                                <Setter Property="MinHeight" Value="32"/>
+                                <Setter Property="MinHeight" Value="20"/>
                                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
                                 <Setter Property="Template">
                                     <ControlTemplate>
@@ -303,8 +303,8 @@
                                                             <DynamicResource ResourceKey="TreeViewItemIndent"/>
                                                         </MultiBinding>
                                                     </Grid.Margin>
-                                                    <Panel Name="PART_ExpandCollapseChevronContainer"
-                                                           Margin="{DynamicResource TreeViewItemExpandCollapseChevronMargin}">
+                                                       <Panel Name="PART_ExpandCollapseChevronContainer"
+                                                           Margin="8,0,2,0">
                                                         <ToggleButton Name="PART_ExpandCollapseChevron"
                                                                       Theme="{StaticResource FluentTreeViewExpandCollapseChevron}"
                                                                       Focusable="False"
@@ -352,7 +352,7 @@
                             <TreeView.DataTemplates>
                                 <TreeDataTemplate DataType="vm:CategoryNode" ItemsSource="{Binding Children}">
                                     <Grid Name="CategoryItemRoot"
-                                          MinHeight="32"
+                                        MinHeight="18"
                                           Background="Transparent"
                                           DragDrop.AllowDrop="True"
                                           DragDrop.Drop="Category_Drop"
@@ -360,7 +360,7 @@
                                           PointerPressed="Category_PointerPressed"
                                           PointerMoved="Category_PointerMoved">
                                         <!-- Display Mode -->
-                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,2"
+                                        <StackPanel Orientation="Horizontal" Spacing="2" Margin="1,0,1,0"
                                                     IsVisible="{Binding !IsEditing}"
                                                     DoubleTapped="CategoryLabel_DoubleTapped">
                                             <TextBlock Text="📂" FontSize="13" VerticalAlignment="Center"

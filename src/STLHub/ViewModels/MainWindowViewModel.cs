@@ -160,30 +160,30 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public int CardWidth => CurrentViewSize switch
     {
-        ViewSize.Small => 100,
-        ViewSize.Large => 220,
-        _ => 150
+        ViewSize.Small => 120,
+        ViewSize.Large => 264,
+        _ => 180
     };
 
     public int CardHeight => CurrentViewSize switch
     {
-        ViewSize.Small => 115,
-        ViewSize.Large => 240,
-        _ => 165
+        ViewSize.Small => 138,
+        ViewSize.Large => 288,
+        _ => 198
     };
 
     public int ThumbnailHeight => CurrentViewSize switch
     {
-        ViewSize.Small => 75,
-        ViewSize.Large => 170,
-        _ => 110
+        ViewSize.Small => 90,
+        ViewSize.Large => 204,
+        _ => 132
     };
 
     public int CardFontSize => CurrentViewSize switch
     {
-        ViewSize.Small => 10,
-        ViewSize.Large => 14,
-        _ => 12
+        ViewSize.Small => 12,
+        ViewSize.Large => 17,
+        _ => 14
     };
 
     [RelayCommand]
