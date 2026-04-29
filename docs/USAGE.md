@@ -6,7 +6,7 @@ This guide walks you through the main workflows in STLHub.
 
 ## Overview
 
-<video src="intro.mp4" controls title="STLHub Overview" width="900"></video>
+<video src="https://raw.githubusercontent.com/jalf/stlhub/main/docs/intro.mp4" controls title="STLHub Overview" width="900"></video>
 
 STLHub is a desktop app for organizing large 3D model libraries. It indexes your `.stl`, `.3mf` and `.obj` files into a searchable, tagged catalogue so you can find any model in seconds.
 
@@ -14,7 +14,7 @@ STLHub is a desktop app for organizing large 3D model libraries. It indexes your
 
 ## Importing Models
 
-<video src="add_objects.mp4" controls title="Adding Objects to STLHub" width="900"></video>
+<video src="https://raw.githubusercontent.com/jalf/stlhub/main/docs/add_objects.mp4" controls title="Adding Objects to STLHub" width="900"></video>
 
 ### Import files
 
