@@ -158,7 +158,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private ThemeOption _selectedThemeOption = null!;
 
     [ObservableProperty]
-    private string _statusText = "Pronto";
+    private string _statusText = "Pronto.";
 
     [ObservableProperty]
     private bool _isBusy;
@@ -243,6 +243,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public string CurrentThemeKey => SelectedThemeOption?.Key ?? "Dark";
 
     public ObservableCollection<Object3D> Items { get; } = new();
+
+    /// <summary>True when the current library has no imported models.</summary>
+    public bool IsLibraryEmpty => Items.Count == 0;
+
     public ObservableCollection<Attachment> Attachments { get; } = new();
     public ObservableCollection<Tag> ObjectTags { get; } = new();
     public ObservableCollection<CategoryNode> Categories { get; } = new();
@@ -263,6 +267,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _libraryManager = libraryManager;
         _selectedSortOption = SortOptions[0];
         _selectedThemeOption = ThemeOptions[0];
+        Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsLibraryEmpty));
         LoadCategories();
         LoadAllTags();
         LoadItems();
@@ -307,7 +312,7 @@ public partial class MainWindowViewModel : ViewModelBase
             LoadItems();
 
             OnRepositoryChanged?.Invoke(repoPath);
-            StatusText = $"Repositório aberto — {Items.Count} objeto(s)";
+            StatusText = "Pronto.";
         }
         catch (Exception ex)
         {
@@ -495,7 +500,7 @@ public partial class MainWindowViewModel : ViewModelBase
             item.CategoryName = item.CategoryId.HasValue && categoryMap.TryGetValue(item.CategoryId.Value, out var catName) ? catName : null;
             Items.Add(item);
         }
-        StatusText = $"{Items.Count} objeto(s)";
+        StatusText = "Pronto.";
     }
 
     private Dictionary<int, string> BuildCategoryNameMap()

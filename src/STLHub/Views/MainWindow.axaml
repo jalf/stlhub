@@ -438,6 +438,31 @@
                     <Image Source="/Assets/watermark.png" Width="220" Height="220"
                            RenderOptions.BitmapInterpolationMode="HighQuality"/>
                 </StackPanel>
+                <!-- Empty state -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{Binding IsLibraryEmpty}"
+                            IsHitTestVisible="False"
+                            Spacing="12">
+                    <PathIcon Data="{StaticResource FolderOpenIcon}"
+                              Width="40" Height="40"
+                              Foreground="{DynamicResource TextMuted}"
+                              HorizontalAlignment="Center"
+                              Opacity="0.4"/>
+                    <TextBlock Text="Biblioteca vazia"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondary}"
+                               HorizontalAlignment="Center"
+                               Opacity="0.6"/>
+                    <TextBlock Text="Arraste uma pasta aqui ou use Abrir para criar uma biblioteca"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextMuted}"
+                               HorizontalAlignment="Center"
+                               Opacity="0.6"
+                               MaxWidth="280"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
                 <!-- Object Cards -->
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <Border Padding="16">
@@ -450,12 +475,38 @@
                             <WrapPanel />
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerTheme>
+                        <ControlTheme TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <ControlTemplate>
+                                    <Panel>
+                                        <ContentPresenter Name="PART_ContentPresenter"
+                                                          Content="{TemplateBinding Content}"
+                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                        <Border Name="SelectionRing"
+                                                CornerRadius="12"
+                                                BorderThickness="0"
+                                                BorderBrush="{DynamicResource AccentColor}"
+                                                IsHitTestVisible="False"
+                                                Margin="4"/>
+                                    </Panel>
+                                </ControlTemplate>
+                            </Setter>
+                            <Style Selector="^:selected /template/ Border#SelectionRing">
+                                <Setter Property="BorderThickness" Value="2"/>
+                            </Style>
+                        </ControlTheme>
+                    </ListBox.ItemContainerTheme>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{DynamicResource CardBg}" Margin="4" CornerRadius="10"
+                            <Border Background="{DynamicResource CardBg}" Margin="4" CornerRadius="12"
                                     Width="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardWidth}"
                                     Height="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardHeight}"
-                                    BoxShadow="0 1 4 0 #20000000"
+                                    BoxShadow="0 2 12 0 #28000000"
                                     DoubleTapped="Object3D_DoubleTapped"
                                     PointerPressed="Object3D_PointerPressed"
                                     PointerMoved="Object3D_PointerMoved">
@@ -472,7 +523,7 @@
                                 </Border.ContextMenu>
                                 <Grid RowDefinitions="*, Auto">
                                     <!-- Thumbnail -->
-                                    <Border Grid.Row="0" CornerRadius="10,10,0,0" ClipToBounds="True"
+                                    <Border Grid.Row="0" CornerRadius="12,12,0,0" ClipToBounds="True"
                                             Background="{DynamicResource CardThumbnailBg}"
                                             Height="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).ThumbnailHeight}"
                                             PointerEntered="ThumbnailBorder_PointerEntered"
@@ -493,11 +544,11 @@
                                     <StackPanel Grid.Row="1" Margin="10,6,10,8">
                                         <StackPanel Spacing="4">
                                             <!-- Categoria como badge alinhada à direita -->
-                                            <Border Background="{DynamicResource BadgeBg}"
+                                            <Border Background="{DynamicResource TagBg}"
                                                     Padding="8,2" CornerRadius="8" HorizontalAlignment="Right"
                                                     IsVisible="{Binding CategoryName, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                <TextBlock Text="{Binding CategoryName}" FontSize="10" FontWeight="Bold"
-                                                           Foreground="{DynamicResource BadgeText}"/>
+                                                <TextBlock Text="{Binding CategoryName}" FontSize="10" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextPrimary}"/>
                                             </Border>
                                             <!-- Nome do objeto -->
                                             <TextBlock
@@ -529,9 +580,9 @@
                 <ScrollViewer Grid.Row="1" Margin="0,0,0,15" Padding="0,0,10,0">
                     <StackPanel Spacing="14">
                         <!-- Thumbnail Preview -->
-                        <Border CornerRadius="10" ClipToBounds="True" Background="{DynamicResource CardThumbnailBg}"
+                        <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource CardThumbnailBg}"
                                 Height="160" Cursor="Hand" DoubleTapped="DetailThumbnail_DoubleTapped"
-                                BoxShadow="0 2 8 0 #20000000">
+                                BoxShadow="0 2 10 0 #28000000">
                             <Panel>
                                 <Image Source="{Binding SelectedObject.ThumbnailPath, Converter={StaticResource LocalImagePathConverter}}"
                                        Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -693,7 +744,7 @@
                            Foreground="{DynamicResource TextMuted}"
                            VerticalAlignment="Center">
                     <TextBlock.Text>
-                        <MultiBinding StringFormat="{}{0} object(s)">
+                        <MultiBinding StringFormat="{}{0} objeto(s)">
                             <Binding Path="Items.Count"/>
                         </MultiBinding>
                     </TextBlock.Text>
