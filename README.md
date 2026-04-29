@@ -88,9 +88,12 @@ ObjectTag (ObjectId, TagId)
 Attachment(Id, ObjectId, FilePath, Type)
 ```
 
+## Documentation
+
+- [Usage Guide](docs/USAGE.md) — step-by-step instructions with video walkthroughs for importing, searching and managing your library.
+
 ## Roadmap
 
-- [ ] Interactive 3D viewer
 - [ ] AI-powered auto-tagging
 - [ ] Cloud sync
 - [ ] Thingiverse / Printables integration
