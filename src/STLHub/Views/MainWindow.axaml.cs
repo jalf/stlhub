@@ -24,6 +24,7 @@ namespace STLHub.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private LoadingDialog? _loadingDialog;
 
     public MainWindow()
     {
@@ -57,6 +58,17 @@ public partial class MainWindow : Window
                         AllowMultiple = false
                     });
                     return folders.FirstOrDefault()?.TryGetLocalPath();
+                };
+
+                vm.ShowLoadingDialog = () =>
+                {
+                    _loadingDialog = new LoadingDialog();
+                    _ = _loadingDialog.ShowDialog(this);
+                };
+                vm.CloseLoadingDialog = () =>
+                {
+                    _loadingDialog?.Close();
+                    _loadingDialog = null;
                 };
 
                 vm.FocusCategoryEditBox = () =>

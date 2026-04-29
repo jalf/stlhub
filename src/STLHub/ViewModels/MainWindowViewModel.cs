@@ -77,6 +77,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private ObjectRepository? _repository;
     private LibraryManager? _libraryManager;
+    private CancellationTokenSource? _loadCts;
 
     /// <summary>Callback set by the View to display warning dialogs.</summary>
     public Func<string, string, Task>? ShowWarningAsync { get; set; }
@@ -92,6 +93,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Callback set by the View to focus and select the active category rename TextBox.</summary>
     public Action? FocusCategoryEditBox { get; set; }
+
+    /// <summary>Callback set by the View to show a loading dialog for slow queries.</summary>
+    public Action? ShowLoadingDialog { get; set; }
+
+    /// <summary>Callback set by the View to close the loading dialog.</summary>
+    public Action? CloseLoadingDialog { get; set; }
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -411,45 +418,84 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void LoadItems(string searchTerm = "")
     {
+        _loadCts?.Cancel();
+        _loadCts = new CancellationTokenSource();
+        _ = LoadItemsAsync(searchTerm, _loadCts.Token);
+    }
+
+    private async Task LoadItemsAsync(string searchTerm, CancellationToken ct)
+    {
         if (_repository == null) return;
 
-        Items.Clear();
-
-        IEnumerable<Object3D> results;
+        // Capture all UI-thread state before going async
+        List<int>? categoryIds = null;
         if (SelectedCategory != null)
         {
-            // Collect all IDs from the selected category and its children
-            var categoryIds = new List<int>();
+            categoryIds = [];
             CollectCategoryAndChildrenIds(SelectedCategory, categoryIds);
-            results = _repository.GetAllObjects()
-                .Where(o => o.CategoryId.HasValue && categoryIds.Contains(o.CategoryId.Value));
-            // Apply search filter if needed
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                results = results.Where(o =>
-                    (o.Name?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                    (o.Description?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0)
-                );
-            }
         }
-        else
+        var tagId = SelectedTag?.Id;
+        var sortOrder = CurrentSortOrder;
+        var categoryMap = BuildCategoryNameMap();
+        var repo = _repository;
+
+        Items.Clear();
+        StatusText = "Carregando objetos...";
+
+        var queryTask = Task.Run(() =>
         {
-            results = _repository.SearchObjects(searchTerm, null, SelectedTag?.Id);
+            IEnumerable<Object3D> results;
+            if (categoryIds != null)
+            {
+                results = repo.GetAllObjects()
+                    .Where(o => o.CategoryId.HasValue && categoryIds.Contains(o.CategoryId.Value));
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                    results = results.Where(o =>
+                        (o.Name?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                        (o.Description?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0));
+            }
+            else
+            {
+                results = repo.SearchObjects(searchTerm, null, tagId);
+            }
+
+            IEnumerable<Object3D> sorted = sortOrder switch
+            {
+                SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
+                SortOrder.NameAsc => results.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase),
+                SortOrder.NameDesc => results.OrderByDescending(o => o.Name, StringComparer.OrdinalIgnoreCase),
+                _ => results.OrderByDescending(o => o.CreatedAt)
+            };
+            return sorted.ToList();
+        });
+
+        bool dialogShown = false;
+        if (await Task.WhenAny(queryTask, Task.Delay(2000)) != queryTask && !ct.IsCancellationRequested)
+        {
+            ShowLoadingDialog?.Invoke();
+            dialogShown = true;
         }
 
-        var sorted = CurrentSortOrder switch
+        List<Object3D> items;
+        try
         {
-            SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
-            SortOrder.NameAsc => results.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase),
-            SortOrder.NameDesc => results.OrderByDescending(o => o.Name, StringComparer.OrdinalIgnoreCase),
-            _ => results.OrderByDescending(o => o.CreatedAt)
-        };
-        var categoryMap = BuildCategoryNameMap();
-        foreach (var item in sorted)
+            items = await queryTask;
+        }
+        catch
+        {
+            if (dialogShown) CloseLoadingDialog?.Invoke();
+            return;
+        }
+
+        if (dialogShown) CloseLoadingDialog?.Invoke();
+        if (ct.IsCancellationRequested) return;
+
+        foreach (var item in items)
         {
             item.CategoryName = item.CategoryId.HasValue && categoryMap.TryGetValue(item.CategoryId.Value, out var catName) ? catName : null;
             Items.Add(item);
         }
+        StatusText = $"{Items.Count} objeto(s)";
     }
 
     private Dictionary<int, string> BuildCategoryNameMap()
