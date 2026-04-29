@@ -286,7 +286,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 dbInitializer.Initialize();
             });
 
-            _repository = new ObjectRepository(dbPath);
+            _repository = new ObjectRepository(dbPath, repoPath);
             _libraryManager = new LibraryManager(libraryPath, _repository);
 
             CurrentRepositoryName = repoPath;

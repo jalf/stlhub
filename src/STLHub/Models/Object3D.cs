@@ -4,12 +4,14 @@ using System;
 namespace STLHub.Models;
 
 /// <summary>
-/// Represents a 3D object stored in the library (STL, 3MF, OBJ).
+/// Represents a 3D object in the STLHub application, including metadata and file paths.
 /// </summary>
 public class Object3D
 {
-    // Propriedade auxiliar para exibição (não mapeada no banco)
+    // Optional category name for display purposes (not stored in DB)
     public string? CategoryName { get; set; }
+    public string RelativeFilePath { get; set; } = string.Empty;
+
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

@@ -546,7 +546,7 @@
 
                         <TextBlock Text="Caminho" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,0,0,-8"/>
-                        <TextBlock Text="{Binding SelectedObject.MainFilePath}" FontSize="10"
+                        <TextBlock Text="{Binding SelectedObject.RelativeFilePath}" FontSize="10"
                                    Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap"/>
 
                         <TextBlock Text="Nome" Foreground="{DynamicResource TextSecondary}" FontSize="11"

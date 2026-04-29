@@ -39,7 +39,7 @@ public partial class App : Application
             var dbInitializer = new DatabaseInitializer(dbPath);
             dbInitializer.Initialize();
 
-            var repository = new ObjectRepository(dbPath);
+            var repository = new ObjectRepository(dbPath, repoPath);
             var libraryManager = new LibraryManager(libraryPath, repository);
 
             var viewSize = Enum.TryParse<ViewSize>(settings.ViewSize, out var vs) ? vs : ViewSize.Medium;
