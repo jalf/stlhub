@@ -551,11 +551,11 @@
 
                         <TextBlock Text="Nome" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,6,0,-8"/>
-                        <TextBox Text="{Binding SelectedObject.Name, Mode=TwoWay}" CornerRadius="6"/>
+                        <TextBox Text="{Binding EditedName, Mode=TwoWay}" CornerRadius="6"/>
 
                         <TextBlock Text="Descrição" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,2,0,-8"/>
-                        <TextBox Text="{Binding SelectedObject.Description, Mode=TwoWay}"
+                        <TextBox Text="{Binding EditedDescription, Mode=TwoWay}"
                                  AcceptsReturn="True" Height="80" TextWrapping="Wrap" CornerRadius="6"/>
 
                         <TextBlock Text="Data de criação" Foreground="{DynamicResource TextSecondary}" FontSize="11"
@@ -655,6 +655,7 @@
                 </ScrollViewer>
 
                 <Button Grid.Row="2" Content="Salvar Alterações" Command="{Binding SaveMetadataCommand}"
+                        IsEnabled="{Binding HasUnsavedChanges}"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                         Background="{DynamicResource AccentColor}" Foreground="{DynamicResource TextOnAccent}"
                         Padding="12" FontWeight="Bold" FontSize="14" CornerRadius="8"/>

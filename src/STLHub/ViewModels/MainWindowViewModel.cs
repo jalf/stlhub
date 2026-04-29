@@ -102,6 +102,24 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private Object3D? _selectedObject;
 
+    private string _originalName = string.Empty;
+    private string _originalDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _editedName = string.Empty;
+
+    [ObservableProperty]
+    private string _editedDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasUnsavedChanges;
+
+    partial void OnEditedNameChanged(string value) =>
+        HasUnsavedChanges = value != _originalName || EditedDescription != _originalDescription;
+
+    partial void OnEditedDescriptionChanged(string value) =>
+        HasUnsavedChanges = EditedName != _originalName || value != _originalDescription;
+
     [ObservableProperty]
     private ViewSize _currentViewSize = ViewSize.Medium;
 
@@ -312,6 +330,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedObjectChanged(Object3D? value)
     {
+        _originalName = value?.Name ?? string.Empty;
+        _originalDescription = value?.Description ?? string.Empty;
+        EditedName = _originalName;
+        EditedDescription = _originalDescription;
+        HasUnsavedChanges = false;
         LoadAttachments();
         LoadTags();
     }
@@ -644,8 +667,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (SelectedObject != null && _repository != null)
         {
+            SelectedObject.Name = EditedName;
+            SelectedObject.Description = EditedDescription;
             _repository.UpdateObject(SelectedObject);
-            // Optionally, we could load items here, but to keep selection active we rely on TwoWay binding
+            _originalName = EditedName;
+            _originalDescription = EditedDescription;
+            HasUnsavedChanges = false;
+            LoadItems(SearchText);
         }
     }
 
