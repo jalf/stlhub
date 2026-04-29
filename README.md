@@ -34,7 +34,6 @@
 - **Tags** — assign multiple tags to any object for flexible cross-cutting classification.
 - **Attachments** — associate images, G-code, PDFs, instructions and other files to each 3D object.
 - **Duplicate detection** — file hashes prevent the same model from being imported twice.
-- **Grid / List view** — browse your library with thumbnails, names, tags and dates.
 
 ## Tech Stack
 
@@ -95,6 +94,7 @@ Attachment(Id, ObjectId, FilePath, Type)
 ## Roadmap
 
 - [ ] AI-powered auto-tagging
+- [ ] Support STEP Files
 - [ ] Cloud sync
 - [ ] Thingiverse / Printables integration
 - [ ] Model versioning
