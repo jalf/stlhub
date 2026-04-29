@@ -21,6 +21,8 @@ Usuários com bibliotecas grandes de modelos 3D enfrentam:
 
 ## 3. Objetivo do Produto
 
+Organizar, catalogar e encontrar modelos 3D em segundos. A biblioteca é o acervo criativo do maker; o app existe para que nenhum modelo se perca. Sucesso: abrir o app, encontrar o modelo certo, e mandar para a impressora — em menos de 30 segundos.
+
 Centralizar e indexar bibliotecas pessoais/profissionais de objetos 3D, tornando simples:
 
 - Armazenar
@@ -30,6 +32,10 @@ Centralizar e indexar bibliotecas pessoais/profissionais de objetos 3D, tornando
 - Reutilizar
 
 ## 4. Público-Alvo
+
+Makers, hobbyistas de impressão 3D, engenheiros e designers que mantêm grandes bibliotecas de arquivos STL, 3MF e OBJ. Usam o app na bancada ou no computador de trabalho, antes ou depois de uma sessão de impressão, para localizar e organizar modelos. Conhecem a comunidade maker (Printables, Thingiverse, MakerWorld) e têm referências visuais ricas de como uma biblioteca de modelos deve ser apresentada.
+
+Perfis:
 
 - Makers / hobbyistas de impressão 3D
 - Designers 3D
@@ -66,8 +72,6 @@ Cada item terá:
 - Data de importação
 - Arquivos associados
 - Thumbnail
-
-
 
 ### 5.2.1 Sistema de Categorias Hierárquicas
 
@@ -173,7 +177,33 @@ Tela de detalhe:
 - Busca instantânea
 - Interface simples
 
-## 7. Fluxo Principal do Usuário
+### Acessibilidade
+
+- WCAG AA mínimo para todos os temas
+- Suporte a dark e light mode
+- Sem dependência exclusiva de cor para transmitir informação crítica
+
+## 7. Brand & Design
+
+### Personalidade
+
+Criativo, expressivo, vibrante. Sente como um ateliê organizado e vivo — não como um editor de código ou painel corporativo. Tem energia de criação, não de administração.
+
+### Anti-referências
+
+- **VS Code / qualquer dev tool genérico:** paleta cinza fria, acento azul Microsoft, aparência de IDE
+- **SaaS dashboard corporativo:** cards idênticos, métricas com número gigante, gradientes de accent
+- **App gamer / RGB:** neon, excesso de personalidade que compete com o conteúdo
+
+### Princípios de Design
+
+1. **O modelo é o protagonista** — thumbnails e navegação visual tomam prioridade; chrome e controles recuam
+2. **Estrutura que liberta** — categorias e tags como suporte à exploração criativa, não como burocracia
+3. **Linguagem maker** — visual que ressoa com a comunidade maker; autêntico, não corporativo
+4. **Clareza rápida** — scannable em segundos, ação imediata, zero atrito entre intenção e execução
+5. **Vivo mas não barulhento** — vibrance nos detalhes certos; o conteúdo do usuário (seus modelos) é a coisa mais colorida na tela
+
+## 8. Fluxo Principal do Usuário
 
 ### Importar
 
@@ -225,7 +255,7 @@ Resultado no app:
 3. Abre item
 4. Exporta ou abre pasta ou baixa o arquivo diretamente
 
-## 8. Tecnologias Sugeridas
+## 9. Tecnologias Sugeridas
 
 ### Desktop App
 
@@ -243,7 +273,7 @@ Resultado no app:
 
 - Assimp + OpenGL / HelixToolkit / Blender headless
 
-## 9. Modelo de Dados Simplificado
+## 10. Modelo de Dados Simplificado
 
 ### Category
 
@@ -283,11 +313,10 @@ Resultado no app:
 - FilePath
 - Type
 
-## 10. Roadmap Futuro
+## 11. Roadmap Futuro
 
 ### V2
 
-- Visualizador 3D interativo embutido
 - Auto-tagging com IA
 - Sincronização cloud
 
@@ -297,20 +326,20 @@ Resultado no app:
 - Integração Thingiverse / Printables
 - Versionamento de modelos
 
-## 11. Métricas de Sucesso
+## 12. Métricas de Sucesso
 
 - Tempo médio para achar arquivo < 10s
 - % arquivos catalogados com tags
 - Retenção semanal
 - Quantidade de imports por usuário
 
-## 12. Riscos
+## 13. Riscos
 
 - Renderização inconsistente de STL corrompido
 - Bibliotecas enormes (>100k arquivos)
 - Duplicatas com nomes diferentes
 - UX ruim ao editar muitos itens
 
-## 13. Recomendação Direta
+## 14. Recomendação Direta
 
 Produto ideal como **desktop local-first em C# + Avalonia + SQLite FTS5**.
