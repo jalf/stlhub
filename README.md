@@ -46,6 +46,20 @@
 | MVVM | CommunityToolkit.Mvvm |
 | Image Processing | SixLabors.ImageSharp |
 
+## Download
+
+Pre-built packages are available on the [Releases](https://github.com/jalf/stlhub/releases) page.
+
+| Platform | Package |
+|---|---|
+| Windows | `STLHub-Setup-x.x.x.exe` — installer (recommended) |
+| Windows | `STLHub-win-x64.zip` — portable, no installation required |
+| Linux | `STLHub-linux-x64.tar.gz` |
+| macOS (Intel) | `STLHub-osx-x64.tar.gz` |
+| macOS (Apple Silicon) | `STLHub-osx-arm64.tar.gz` |
+
+> No .NET installation required — all packages are self-contained.
+
 ## Getting Started
 
 ### Prerequisites
@@ -94,7 +108,6 @@ Attachment(Id, ObjectId, FilePath, Type)
 ## Roadmap
 
 - [ ] AI-powered auto-tagging
-- [ ] Support STEP Files
 - [ ] Cloud sync
 - [ ] Thingiverse / Printables integration
 - [ ] Model versioning
