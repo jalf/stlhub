@@ -68,7 +68,7 @@ public class LibraryManager
     }
 
     public static readonly HashSet<string> Object3DExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".stl", ".3mf", ".obj" };
+        { ".stl", ".3mf", ".obj", ".step", ".stp" };
 
     /// <summary>
     /// Imports a folder recursively: sub-folders become categories, 3D files become objects,
