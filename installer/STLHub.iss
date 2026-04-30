@@ -19,7 +19,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=..\..\installer-output
+OutputDir=..\installer-output
 OutputBaseFilename=STLHub-Setup-{#AppVersion}
 SetupIconFile=..\src\STLHub\Assets\avalonia-logo.ico
 Compression=lzma2/ultra64
@@ -34,7 +34,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Files]
-Source: "..\..\publish\STLHub-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\publish\STLHub-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
