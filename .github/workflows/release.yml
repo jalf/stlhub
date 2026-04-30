@@ -104,8 +104,15 @@ jobs:
           path: |
             ${{ matrix.artifact }}.zip
             ${{ matrix.artifact }}.tar.gz
-            installer-output/STLHub-Setup-*.exe
           if-no-files-found: ignore
+
+      - name: Upload installer (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: STLHub-installer
+          path: installer-output/STLHub-Setup-*.exe
+          if-no-files-found: error
 
   release:
     needs: build
@@ -128,3 +135,4 @@ jobs:
             artifacts/*.zip
             artifacts/*.tar.gz
             artifacts/STLHub-Setup-*.exe
+          fail_on_unmatched_files: true
