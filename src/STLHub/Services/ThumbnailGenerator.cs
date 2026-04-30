@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -42,9 +43,10 @@ public static class ThumbnailGenerator
 
             bool success = ext switch
             {
-                ".3mf" => Extract3mfThumbnail(modelFilePath, outPath),
-                ".stl" => RenderStlThumbnail(modelFilePath, outPath),
-                _      => false
+                ".3mf"              => Extract3mfThumbnail(modelFilePath, outPath),
+                ".stl"              => RenderStlThumbnail(modelFilePath, outPath),
+                ".step" or ".stp"   => RenderStepThumbnail(modelFilePath, outPath),
+                _                   => false
             };
 
             if (!success)
@@ -233,6 +235,194 @@ public static class ThumbnailGenerator
             ctx.Fill(Color.FromRgba(70, 70, 85, 255), rect);
         });
         img.SaveAsPng(outPath);
+    }
+
+    // ──────────────────────────────────────────────────
+    // STEP/STP — parse B-rep edges, render isometric wireframe
+    // ──────────────────────────────────────────────────
+    private static bool RenderStepThumbnail(string filePath, string outPath)
+    {
+        try
+        {
+            var cartPoints   = new Dictionary<int, Vec3>();
+            var vertexPoints = new Dictionary<int, int>();
+            var edgeList     = new List<(int v1, int v2)>();
+
+            ParseStepEntities(filePath, cartPoints, vertexPoints, edgeList);
+
+            var segments = new List<(Vec3 a, Vec3 b)>(edgeList.Count);
+            foreach (var (v1, v2) in edgeList)
+            {
+                if (!TryResolveStepVertex(v1, vertexPoints, cartPoints, out var p1)) continue;
+                if (!TryResolveStepVertex(v2, vertexPoints, cartPoints, out var p2)) continue;
+                if (p1.x == p2.x && p1.y == p2.y && p1.z == p2.z) continue;
+                segments.Add((p1, p2));
+            }
+
+            if (segments.Count == 0) return false;
+
+            // Subsample to keep rendering fast on dense models
+            const int MaxSegments = 12_000;
+            if (segments.Count > MaxSegments)
+            {
+                int step = segments.Count / MaxSegments;
+                segments = segments.Where((_, i) => i % step == 0).ToList();
+            }
+
+            return RenderStepWireframe(segments, outPath);
+        }
+        catch { return false; }
+    }
+
+    // Matches STEP numbers in all valid forms: 1. / 1.0 / .5 / 1 / 1E-3 / -2.5E+1
+    private const string StepNum = @"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?";
+
+    private static readonly Regex _stepCartesianRx = new(
+        @$"#(\d+)\s*=\s*CARTESIAN_POINT\s*\(\s*'[^']*'\s*,\s*\(\s*({StepNum})\s*,\s*({StepNum})\s*,\s*({StepNum})\s*\)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex _stepVertexRx = new(
+        @"#(\d+)\s*=\s*VERTEX_POINT\s*\(\s*'[^']*'\s*,\s*#(\d+)\s*\)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex _stepEdgeRx = new(
+        @"#\d+\s*=\s*EDGE_CURVE\s*\(\s*'[^']*'\s*,\s*#(\d+)\s*,\s*#(\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static void ParseStepEntities(
+        string filePath,
+        Dictionary<int, Vec3> cartPoints,
+        Dictionary<int, int> vertexPoints,
+        List<(int, int)> edgeList)
+    {
+        bool inData = false;
+        var buf = new System.Text.StringBuilder(256);
+        using var reader = new StreamReader(filePath);
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            var t = line.Trim();
+            if (!inData)
+            {
+                if (t.Equals("DATA;", StringComparison.OrdinalIgnoreCase)) inData = true;
+                continue;
+            }
+            if (t.Equals("ENDSEC;", StringComparison.OrdinalIgnoreCase)) break;
+
+            buf.Append(t);
+            if (t.EndsWith(';'))
+            {
+                ProcessStepEntity(buf.ToString(), cartPoints, vertexPoints, edgeList);
+                buf.Clear();
+            }
+        }
+    }
+
+    private static void ProcessStepEntity(
+        string entity,
+        Dictionary<int, Vec3> cartPoints,
+        Dictionary<int, int> vertexPoints,
+        List<(int, int)> edgeList)
+    {
+        var m = _stepCartesianRx.Match(entity);
+        if (m.Success)
+        {
+            cartPoints[int.Parse(m.Groups[1].Value)] = new Vec3(
+                float.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(m.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture));
+            return;
+        }
+        m = _stepVertexRx.Match(entity);
+        if (m.Success)
+        {
+            vertexPoints[int.Parse(m.Groups[1].Value)] = int.Parse(m.Groups[2].Value);
+            return;
+        }
+        m = _stepEdgeRx.Match(entity);
+        if (m.Success)
+            edgeList.Add((int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value)));
+    }
+
+    private static bool TryResolveStepVertex(
+        int id,
+        Dictionary<int, int> vertexPoints,
+        Dictionary<int, Vec3> cartPoints,
+        out Vec3 result)
+    {
+        if (vertexPoints.TryGetValue(id, out int ptId) && cartPoints.TryGetValue(ptId, out result))
+            return true;
+        // Some exporters reference CARTESIAN_POINT directly
+        return cartPoints.TryGetValue(id, out result);
+    }
+
+    private static bool RenderStepWireframe(List<(Vec3 a, Vec3 b)> segments, string outPath)
+    {
+        float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
+        foreach (var (a, b) in segments)
+        {
+            foreach (var v in new[] { a, b })
+            {
+                if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+                if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+                if (v.z < minZ) minZ = v.z; if (v.z > maxZ) maxZ = v.z;
+            }
+        }
+
+        float cx = (minX + maxX) / 2f, cy = (minY + maxY) / 2f, cz = (minZ + maxZ) / 2f;
+        float size = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
+        if (size < 1e-6f) return false;
+
+        const float angleX = 0.6154797f;
+        const float angleY = 0.7853982f;
+        float cosY = MathF.Cos(angleY), sinY = MathF.Sin(angleY);
+        float cosX = MathF.Cos(angleX), sinX = MathF.Sin(angleX);
+
+        (float px, float py, float pz) Project(float x, float y, float z)
+        {
+            x -= cx; y -= cy; z -= cz;
+            float rx  = x * cosY - z * sinY;
+            float rz  = x * sinY + z * cosY;
+            float ry2 = y * cosX - rz * sinX;
+            float rz2 = y * sinX + rz * cosX;
+            return (rx, ry2, rz2);
+        }
+
+        int pad = 16;
+        int drawSize = ThumbnailSize - pad * 2;
+        float screenScale = drawSize / size * 0.82f;
+        float MapX(float px) => pad + px * screenScale + drawSize / 2f;
+        float MapY(float py) => pad + -py * screenScale + drawSize / 2f;
+
+        var projected = segments.Select(s =>
+        {
+            var pa = Project(s.a.x, s.a.y, s.a.z);
+            var pb = Project(s.b.x, s.b.y, s.b.z);
+            return (pa, pb, avgZ: (pa.pz + pb.pz) / 2f);
+        }).OrderBy(s => s.avgZ).ToList();
+
+        float zMin   = projected[0].avgZ;
+        float zMax   = projected[^1].avgZ;
+        float zRange = Math.Max(zMax - zMin, 1e-6f);
+
+        using var img = new Image<Rgba32>(ThumbnailSize, ThumbnailSize);
+        img.Mutate(ctx =>
+        {
+            ctx.Fill(Color.FromRgba(28, 28, 32, 255));
+            foreach (var (pa, pb, avgZ) in projected)
+            {
+                float t  = (avgZ - zMin) / zRange;
+                byte  br = (byte)(80 + (int)(t * 175));
+                var   col = Color.FromRgba(br, (byte)(br * 0.85f), (byte)(br * 0.7f), 255);
+                ctx.DrawLine(col, 1f,
+                    new PointF(MapX(pa.px), MapY(pa.py)),
+                    new PointF(MapX(pb.px), MapY(pb.py)));
+            }
+        });
+
+        img.SaveAsPng(outPath);
+        return true;
     }
 
     // ──────────────────────────────────────────────────
