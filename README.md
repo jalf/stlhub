@@ -35,6 +35,59 @@
 - **Attachments** — associate images, G-code, PDFs, instructions and other files to each 3D object.
 - **Duplicate detection** — file hashes prevent the same model from being imported twice.
 
+## Download
+
+<p align="center">
+  <a href="https://github.com/jalf/stlhub/releases/latest">
+    <img src="https://img.shields.io/badge/⬇%20Download%20STLHub-2D7FF9?style=for-the-badge" alt="Download STLHub">
+  </a>
+</p>
+
+<p align="center">
+  <em>Free and open source. Windows, Linux and macOS.</em><br>
+  <em>Nothing else to install — no .NET, no dependencies, no account.</em>
+</p>
+
+### Windows — 3 steps
+
+1. **[Download the installer](https://github.com/jalf/stlhub/releases/latest)** — on the release page, click the file named `STLHub-Setup-x.x.exe`.
+2. **Run the file** you just downloaded and follow the wizard.
+3. **Open STLHub** from the Start menu. Click **Abrir** to pick a folder where your library will live, then drag your 3D model folders onto the window.
+
+> [!NOTE]
+> Windows may show a blue **"Windows protected your PC"** screen when you run the installer. This happens because the installer is not code-signed (a paid certificate we don't have), **not** because anything is wrong with it. Click **More info** → **Run anyway** to continue.
+
+Prefer not to install anything? Download `STLHub-win-x64.zip` instead, unzip it anywhere, and double-click `STLHub.exe` — it runs as-is and can be removed by deleting the folder.
+
+<details>
+<summary><strong>Linux and macOS</strong></summary>
+
+<br>
+
+Download the file for your system from the [latest release](https://github.com/jalf/stlhub/releases/latest):
+
+| System | File |
+|---|---|
+| Linux | `STLHub-linux-x64.tar.gz` |
+| macOS (Apple Silicon — M1/M2/M3/M4) | `STLHub-osx-arm64.tar.gz` |
+| macOS (Intel) | `STLHub-osx-x64.tar.gz` |
+
+Extract it and launch the app:
+
+```bash
+tar -xzf STLHub-*.tar.gz
+chmod +x STLHub
+./STLHub
+```
+
+On macOS, the app is not notarized, so Gatekeeper will refuse to open it on the first try. Remove the quarantine flag once and it will start normally:
+
+```bash
+xattr -d com.apple.quarantine STLHub
+```
+
+</details>
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -46,30 +99,14 @@
 | MVVM | CommunityToolkit.Mvvm |
 | Image Processing | SixLabors.ImageSharp |
 
-## Download
+## Building from Source
 
-Pre-built packages are available on the [Releases](https://github.com/jalf/stlhub/releases) page.
+> Only needed if you want to modify STLHub. To simply use it, see [Download](#download) above.
 
-| Platform | Package |
-|---|---|
-| Windows | `STLHub-Setup-x.x.x.exe` — installer (recommended) |
-| Windows | `STLHub-win-x64.zip` — portable, no installation required |
-| Linux | `STLHub-linux-x64.tar.gz` |
-| macOS (Intel) | `STLHub-osx-x64.tar.gz` |
-| macOS (Apple Silicon) | `STLHub-osx-arm64.tar.gz` |
-
-> No .NET installation required — all packages are self-contained.
-
-## Getting Started
-
-### Prerequisites
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-
-### Build & Run
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
-git clone https://github.com/your-user/stlhub.git
+git clone https://github.com/jalf/stlhub.git
 cd stlhub
 dotnet build
 dotnet run --project src/STLHub
