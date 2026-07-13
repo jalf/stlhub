@@ -14,18 +14,23 @@ namespace STLHub.Services;
 /// Core service for managing the 3D object library. Handles importing files and folders,
 /// managing attachments, deleting objects, and thumbnail regeneration.
 /// </summary>
-public class LibraryManager
+public partial class LibraryManager
 {
+    /// <summary>File extensions treated as importable 3D models.</summary>
+    public static readonly HashSet<string> Object3DExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".stl", ".3mf", ".obj", ".step", ".stp" };
+
     private readonly string _libraryPath;
     private readonly ObjectRepository _repository;
-
     private readonly string _thumbnailsPath;
+    private readonly string _attachmentsPath;
 
     public LibraryManager(string libraryPath, ObjectRepository repository)
     {
         _libraryPath = libraryPath;
         _repository = repository;
         _thumbnailsPath = Path.Combine(libraryPath, "Thumbnails");
+        _attachmentsPath = Path.Combine(libraryPath, "Attachments");
 
         Directory.CreateDirectory(_libraryPath);
         Directory.CreateDirectory(_thumbnailsPath);
@@ -66,9 +71,6 @@ public class LibraryManager
         _repository.AddObject(newObject);
         return newObject;
     }
-
-    public static readonly HashSet<string> Object3DExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".stl", ".3mf", ".obj", ".step", ".stp" };
 
     /// <summary>
     /// Imports a folder recursively: sub-folders become categories, 3D files become objects,
@@ -163,17 +165,13 @@ public class LibraryManager
     {
         if (!File.Exists(sourceFilePath)) return null;
 
-        var attachmentsDir = Path.Combine(_libraryPath, "Attachments");
-        if (!Directory.Exists(attachmentsDir))
-        {
-            Directory.CreateDirectory(attachmentsDir);
-        }
+        Directory.CreateDirectory(_attachmentsPath);
 
         var fileInfo = new FileInfo(sourceFilePath);
         string hash = CalculateHash(sourceFilePath);
-        
+
         string destinationFileName = $"{hash}{fileInfo.Extension}";
-        string destinationFilePath = Path.Combine(attachmentsDir, destinationFileName);
+        string destinationFilePath = Path.Combine(_attachmentsPath, destinationFileName);
 
         if (!File.Exists(destinationFilePath))
         {
@@ -244,31 +242,33 @@ public class LibraryManager
         return newPath;
     }
 
-    private string CalculateHash(string filePath)
+    private static string CalculateHash(string filePath)
     {
-        using var sha256 = SHA256.Create();
         using var stream = File.OpenRead(filePath);
-        var hashBytes = sha256.ComputeHash(stream);
-        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 
+    /// <summary>
+    /// Turns a file or folder name into a display name: separators become spaces,
+    /// camelCase is split, and each word is capitalized.
+    /// </summary>
     private static string SanitizeName(string name)
     {
-        // Replace underscores, dashes, dots with spaces
-        name = Regex.Replace(name, @"[_\-\.]+", " ");
-
-        // Insert space before uppercase letters in camelCase/PascalCase
-        name = Regex.Replace(name, @"(?<=[a-z])(?=[A-Z])", " ");
-
-        // Collapse multiple spaces
-        name = Regex.Replace(name, @"\s{2,}", " ").Trim();
-
-        // Title case: capitalize first letter of each word
-        if (name.Length > 0)
-        {
-            name = Regex.Replace(name, @"\b(\w)", m => m.Value.ToUpper());
-        }
-
-        return name;
+        name = SeparatorsRegex().Replace(name, " ");
+        name = CamelCaseBoundaryRegex().Replace(name, " ");
+        name = ExtraSpacesRegex().Replace(name, " ").Trim();
+        return WordStartRegex().Replace(name, m => m.Value.ToUpper());
     }
+
+    [GeneratedRegex(@"[_\-\.]+")]
+    private static partial Regex SeparatorsRegex();
+
+    [GeneratedRegex(@"(?<=[a-z])(?=[A-Z])")]
+    private static partial Regex CamelCaseBoundaryRegex();
+
+    [GeneratedRegex(@"\s{2,}")]
+    private static partial Regex ExtraSpacesRegex();
+
+    [GeneratedRegex(@"\b(\w)")]
+    private static partial Regex WordStartRegex();
 }

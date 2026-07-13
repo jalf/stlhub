@@ -3,6 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -33,7 +35,7 @@ public static class ThumbnailGenerator
             if (!File.Exists(modelFilePath)) return string.Empty;
 
             var ext = IOPath.GetExtension(modelFilePath).ToLower();
-            var hash = IOPath.GetFileNameWithoutExtension(modelFilePath); // já é o hash
+            var hash = IOPath.GetFileNameWithoutExtension(modelFilePath); // library files are named by their hash
             var outPath = IOPath.Combine(thumbnailsDir, $"{hash}.png");
 
             if (File.Exists(outPath)) return outPath;
@@ -51,7 +53,7 @@ public static class ThumbnailGenerator
 
             if (!success)
             {
-                GenerateFallbackThumbnail(ext, outPath);
+                GenerateFallbackThumbnail(outPath);
             }
 
             return outPath;
@@ -71,10 +73,10 @@ public static class ThumbnailGenerator
         {
             using var archive = ZipFile.OpenRead(filePath);
 
-            // Prioridade por tamanho — queremos o maior thumbnail disponível.
-            // Bambu Studio / Orca Slicer: Auxiliaries/.thumbnails/thumbnail_middle.png (maior resolução)
+            // Ordered largest-first, since we want the highest resolution available.
+            // Bambu Studio / Orca Slicer: Auxiliaries/.thumbnails/thumbnail_middle.png
             // PrusaSlicer: Metadata/thumbnail.png
-            // 3MF genérico: Thumbnails/thumbnail.png ou thumbnail.png
+            // Generic 3MF: Thumbnails/thumbnail.png or thumbnail.png
             var candidateOrder = new[]
             {
                 "Auxiliaries/.thumbnails/thumbnail_middle.png",
@@ -87,7 +89,7 @@ public static class ThumbnailGenerator
 
             ZipArchiveEntry? entry = null;
 
-            // 1. Verificar lista de candidatos conhecidos (case-insensitive)
+            // 1. Look for a known slicer thumbnail path (case-insensitive)
             foreach (var candidate in candidateOrder)
             {
                 entry = archive.Entries.FirstOrDefault(e =>
@@ -95,18 +97,15 @@ public static class ThumbnailGenerator
                 if (entry != null) break;
             }
 
-            // 2. Fallback: pegar o maior PNG no arquivo inteiro
-            if (entry == null)
-            {
-                entry = archive.Entries
-                    .Where(e => e.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                    .MaxBy(e => e.Length);
-            }
+            // 2. Fallback: take the largest PNG anywhere in the archive
+            entry ??= archive.Entries
+                .Where(e => e.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                .MaxBy(e => e.Length);
 
             if (entry == null) return false;
 
             using var inputStream = entry.Open();
-            // Ler para memória primeiro (ZipArchiveEntry não suporta seek)
+            // Buffer into memory first — ZipArchiveEntry streams are not seekable
             using var memStream = new MemoryStream();
             inputStream.CopyTo(memStream);
             memStream.Position = 0;
@@ -134,59 +133,21 @@ public static class ThumbnailGenerator
             var triangles = ParseStl(filePath);
             if (triangles.Count == 0) return false;
 
-            // Bounding box
-            float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
-            float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
-            foreach (var (v0, v1, v2, _) in triangles)
-            {
-                foreach (var v in new[] { v0, v1, v2 })
-                {
-                    if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-                    if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-                    if (v.z < minZ) minZ = v.z; if (v.z > maxZ) maxZ = v.z;
-                }
-            }
+            if (IsoProjection.Fit(triangles.SelectMany(t => new[] { t.v0, t.v1, t.v2 })) is not { } iso)
+                return false;
 
-            float cx = (minX + maxX) / 2f;
-            float cy = (minY + maxY) / 2f;
-            float cz = (minZ + maxZ) / 2f;
-            float scale = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
-            if (scale < 1e-6f) return false;
-
-            // Ângulos isométricos
-            const float angleX = 0.6154797f; // ~35.26°
-            const float angleY = 0.7853982f; // ~45°
-            float cosY = MathF.Cos(angleY), sinY = MathF.Sin(angleY);
-            float cosX = MathF.Cos(angleX), sinX = MathF.Sin(angleX);
-
-            (float px, float py, float pz) Project(float x, float y, float z)
-            {
-                x -= cx; y -= cy; z -= cz;
-                // Rotate Y
-                float rx = x * cosY - z * sinY;
-                float rz = x * sinY + z * cosY;
-                // Rotate X
-                float ry2 = y * cosX - rz * sinX;
-                float rz2 = y * sinX + rz * cosX;
-                return (rx, ry2, rz2);
-            }
-
-            int pad = 16;
-            int drawSize = ThumbnailSize - pad * 2;
-            float screenScale = drawSize / scale * 0.82f;
-
-            // Projetar e ordenar (painter's algorithm — z médio)
+            // Painter's algorithm — draw back-to-front by mean depth
             var projected = triangles.Select(t =>
             {
-                var p0 = Project(t.v0.x, t.v0.y, t.v0.z);
-                var p1 = Project(t.v1.x, t.v1.y, t.v1.z);
-                var p2 = Project(t.v2.x, t.v2.y, t.v2.z);
-                float avgZ = (p0.pz + p1.pz + p2.pz) / 3f;
+                var p0 = iso.Project(t.v0);
+                var p1 = iso.Project(t.v1);
+                var p2 = iso.Project(t.v2);
+                float avgZ = (p0.depth + p1.depth + p2.depth) / 3f;
                 return (p0, p1, p2, avgZ, t.normal);
             }).OrderBy(t => t.avgZ).ToList();
 
-            // Direção da luz
-            float lx = -0.577f, ly = 0.577f, lz = -0.577f;
+            // Light direction
+            const float lx = -0.577f, ly = 0.577f, lz = -0.577f;
 
             using var img = new Image<Rgba32>(ThumbnailSize, ThumbnailSize);
             img.Mutate(ctx =>
@@ -195,22 +156,11 @@ public static class ThumbnailGenerator
 
                 foreach (var (p0, p1, p2, _, normal) in projected)
                 {
-                    float dot = normal.x * lx + normal.y * ly + normal.z * lz;
-                    dot = Math.Max(0.1f, dot);
-                    byte brightness = (byte)(Math.Min(255, (int)(dot * 200) + 40));
+                    float dot = Math.Max(0.1f, normal.x * lx + normal.y * ly + normal.z * lz);
+                    byte brightness = (byte)Math.Min(255, (int)(dot * 200) + 40);
                     var color = Color.FromRgba(brightness, (byte)(brightness * 0.85f), (byte)(brightness * 0.7f), 255);
 
-                    var pts = new PointF[]
-                    {
-                        new(pad + (p0.px * screenScale) + drawSize / 2f,
-                            pad + (-p0.py * screenScale) + drawSize / 2f),
-                        new(pad + (p1.px * screenScale) + drawSize / 2f,
-                            pad + (-p1.py * screenScale) + drawSize / 2f),
-                        new(pad + (p2.px * screenScale) + drawSize / 2f,
-                            pad + (-p2.py * screenScale) + drawSize / 2f),
-                    };
-
-                    ctx.FillPolygon(color, pts);
+                    ctx.FillPolygon(color, iso.ToCanvas(p0), iso.ToCanvas(p1), iso.ToCanvas(p2));
                 }
             });
 
@@ -221,9 +171,9 @@ public static class ThumbnailGenerator
     }
 
     // ──────────────────────────────────────────────────
-    // Fallback — generic icon by file extension
+    // Fallback — generic placeholder icon
     // ──────────────────────────────────────────────────
-    private static void GenerateFallbackThumbnail(string ext, string outPath)
+    private static void GenerateFallbackThumbnail(string outPath)
     {
         using var img = new Image<Rgba32>(ThumbnailSize, ThumbnailSize);
         img.Mutate(ctx =>
@@ -296,7 +246,7 @@ public static class ThumbnailGenerator
         List<(int, int)> edgeList)
     {
         bool inData = false;
-        var buf = new System.Text.StringBuilder(256);
+        var buf = new StringBuilder(256);
         using var reader = new StreamReader(filePath);
         string? line;
         while ((line = reader.ReadLine()) != null)
@@ -328,9 +278,9 @@ public static class ThumbnailGenerator
         if (m.Success)
         {
             cartPoints[int.Parse(m.Groups[1].Value)] = new Vec3(
-                float.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture),
-                float.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture),
-                float.Parse(m.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture));
+                float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                float.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture),
+                float.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture));
             return;
         }
         m = _stepVertexRx.Match(entity);
@@ -358,50 +308,17 @@ public static class ThumbnailGenerator
 
     private static bool RenderStepWireframe(List<(Vec3 a, Vec3 b)> segments, string outPath)
     {
-        float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
-        float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
-        foreach (var (a, b) in segments)
-        {
-            foreach (var v in new[] { a, b })
-            {
-                if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-                if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-                if (v.z < minZ) minZ = v.z; if (v.z > maxZ) maxZ = v.z;
-            }
-        }
-
-        float cx = (minX + maxX) / 2f, cy = (minY + maxY) / 2f, cz = (minZ + maxZ) / 2f;
-        float size = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
-        if (size < 1e-6f) return false;
-
-        const float angleX = 0.6154797f;
-        const float angleY = 0.7853982f;
-        float cosY = MathF.Cos(angleY), sinY = MathF.Sin(angleY);
-        float cosX = MathF.Cos(angleX), sinX = MathF.Sin(angleX);
-
-        (float px, float py, float pz) Project(float x, float y, float z)
-        {
-            x -= cx; y -= cy; z -= cz;
-            float rx  = x * cosY - z * sinY;
-            float rz  = x * sinY + z * cosY;
-            float ry2 = y * cosX - rz * sinX;
-            float rz2 = y * sinX + rz * cosX;
-            return (rx, ry2, rz2);
-        }
-
-        int pad = 16;
-        int drawSize = ThumbnailSize - pad * 2;
-        float screenScale = drawSize / size * 0.82f;
-        float MapX(float px) => pad + px * screenScale + drawSize / 2f;
-        float MapY(float py) => pad + -py * screenScale + drawSize / 2f;
+        if (IsoProjection.Fit(segments.SelectMany(s => new[] { s.a, s.b })) is not { } iso)
+            return false;
 
         var projected = segments.Select(s =>
         {
-            var pa = Project(s.a.x, s.a.y, s.a.z);
-            var pb = Project(s.b.x, s.b.y, s.b.z);
-            return (pa, pb, avgZ: (pa.pz + pb.pz) / 2f);
+            var pa = iso.Project(s.a);
+            var pb = iso.Project(s.b);
+            return (pa, pb, avgZ: (pa.depth + pb.depth) / 2f);
         }).OrderBy(s => s.avgZ).ToList();
 
+        // Fade distant edges: nearer segments are drawn brighter
         float zMin   = projected[0].avgZ;
         float zMax   = projected[^1].avgZ;
         float zRange = Math.Max(zMax - zMin, 1e-6f);
@@ -415,9 +332,7 @@ public static class ThumbnailGenerator
                 float t  = (avgZ - zMin) / zRange;
                 byte  br = (byte)(80 + (int)(t * 175));
                 var   col = Color.FromRgba(br, (byte)(br * 0.85f), (byte)(br * 0.7f), 255);
-                ctx.DrawLine(col, 1f,
-                    new PointF(MapX(pa.px), MapY(pa.py)),
-                    new PointF(MapX(pb.px), MapY(pb.py)));
+                ctx.DrawLine(col, 1f, iso.ToCanvas(pa), iso.ToCanvas(pb));
             }
         });
 
@@ -426,31 +341,93 @@ public static class ThumbnailGenerator
     }
 
     // ──────────────────────────────────────────────────
-    // STL parser (binary and ASCII formats)
+    // Shared isometric projection
     // ──────────────────────────────────────────────────
     private record struct Vec3(float x, float y, float z);
+
+    /// <summary>
+    /// Centers a model's bounding box and projects its points isometrically onto the
+    /// thumbnail canvas. The projected depth is used to sort faces back-to-front.
+    /// </summary>
+    private readonly struct IsoProjection
+    {
+        private const float AngleX = 0.6154797f; // ~35.26°
+        private const float AngleY = 0.7853982f; // 45°
+        private const int Padding = 16;
+        private const int DrawSize = ThumbnailSize - Padding * 2;
+
+        private static readonly float CosX = MathF.Cos(AngleX);
+        private static readonly float SinX = MathF.Sin(AngleX);
+        private static readonly float CosY = MathF.Cos(AngleY);
+        private static readonly float SinY = MathF.Sin(AngleY);
+
+        private readonly float _cx, _cy, _cz, _scale;
+
+        private IsoProjection(float cx, float cy, float cz, float scale)
+            => (_cx, _cy, _cz, _scale) = (cx, cy, cz, scale);
+
+        /// <summary>
+        /// Builds a projection fitted to the given points, or null when they have no
+        /// measurable extent (empty or degenerate model).
+        /// </summary>
+        public static IsoProjection? Fit(IEnumerable<Vec3> points)
+        {
+            float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
+            foreach (var v in points)
+            {
+                if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+                if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+                if (v.z < minZ) minZ = v.z; if (v.z > maxZ) maxZ = v.z;
+            }
+
+            float size = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
+            if (float.IsNaN(size) || size < 1e-6f) return null;
+
+            return new IsoProjection(
+                (minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f,
+                DrawSize / size * 0.82f);
+        }
+
+        /// <summary>Projects a model-space point; <c>depth</c> increases towards the viewer.</summary>
+        public (float x, float y, float depth) Project(Vec3 v)
+        {
+            float x = v.x - _cx, y = v.y - _cy, z = v.z - _cz;
+            float rx = x * CosY - z * SinY;
+            float rz = x * SinY + z * CosY;
+            return (rx, y * CosX - rz * SinX, y * SinX + rz * CosX);
+        }
+
+        /// <summary>Maps a projected point to canvas coordinates.</summary>
+        public PointF ToCanvas((float x, float y, float depth) p) => new(
+            Padding + p.x * _scale + DrawSize / 2f,
+            Padding + -p.y * _scale + DrawSize / 2f);
+    }
+
+    // ──────────────────────────────────────────────────
+    // STL parser (binary and ASCII formats)
+    // ──────────────────────────────────────────────────
 
     private static List<(Vec3 v0, Vec3 v1, Vec3 v2, Vec3 normal)> ParseStl(string filePath)
     {
         var result = new List<(Vec3, Vec3, Vec3, Vec3)>();
         using var stream = File.OpenRead(filePath);
 
-        // Detectar binário: primeiros 80 bytes são cabeçalho, depois uint32 com contagem
+        // Binary layout: an 80-byte header, then a uint32 triangle count.
         byte[] header = new byte[80];
         int read = stream.Read(header, 0, 80);
         if (read < 80) return result;
 
-        // ASCII começa com "solid" (mas binário pode também — verificar tamanho)
+        // ASCII files start with "solid", but so do some binary ones — confirm by
+        // checking whether the file size matches what the binary layout implies.
         bool isAscii = false;
         try
         {
-            string headerStr = System.Text.Encoding.ASCII.GetString(header).TrimStart();
+            string headerStr = Encoding.ASCII.GetString(header).TrimStart();
             if (headerStr.StartsWith("solid", StringComparison.OrdinalIgnoreCase))
             {
-                // Confirma ASCII pelo tamanho esperado vs tamanho real
-                uint triangleCount = 0;
-                var br2 = new BinaryReader(stream);
-                triangleCount = br2.ReadUInt32();
+                using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
+                uint triangleCount = reader.ReadUInt32();
                 long expectedBinary = 80 + 4 + triangleCount * 50L;
                 isAscii = new FileInfo(filePath).Length != expectedBinary;
             }
@@ -503,17 +480,17 @@ public static class ThumbnailGenerator
             if (line.StartsWith("facet normal"))
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                normal = new Vec3(float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture),
-                                  float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture),
-                                  float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture));
+                normal = new Vec3(float.Parse(parts[2], CultureInfo.InvariantCulture),
+                                  float.Parse(parts[3], CultureInfo.InvariantCulture),
+                                  float.Parse(parts[4], CultureInfo.InvariantCulture));
                 vi = 0;
             }
             else if (line.StartsWith("vertex") && vi < 3)
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                verts[vi++] = new Vec3(float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
-                                       float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture),
-                                       float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture));
+                verts[vi++] = new Vec3(float.Parse(parts[1], CultureInfo.InvariantCulture),
+                                       float.Parse(parts[2], CultureInfo.InvariantCulture),
+                                       float.Parse(parts[3], CultureInfo.InvariantCulture));
             }
             else if (line.StartsWith("endfacet") && vi == 3)
             {

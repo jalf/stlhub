@@ -1,4 +1,3 @@
-
 using System;
 
 namespace STLHub.Models;
@@ -8,10 +7,6 @@ namespace STLHub.Models;
 /// </summary>
 public class Object3D
 {
-    // Optional category name for display purposes (not stored in DB)
-    public string? CategoryName { get; set; }
-    public string RelativeFilePath { get; set; } = string.Empty;
-
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -21,4 +16,12 @@ public class Object3D
     public string Hash { get; set; } = string.Empty;
     public int? CategoryId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Derived at read time, not persisted.
+
+    /// <summary>Repo-relative form of <see cref="MainFilePath"/>, populated on read.</summary>
+    public string RelativeFilePath { get; set; } = string.Empty;
+
+    /// <summary>Category name resolved for display; not stored in the database.</summary>
+    public string? CategoryName { get; set; }
 }

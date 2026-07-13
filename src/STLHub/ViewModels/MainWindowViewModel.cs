@@ -15,41 +15,7 @@ using STLHub.Services;
 
 namespace STLHub.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
-{
-    /// <summary>
-    /// Clears the search text box.
-    /// </summary>
-    [RelayCommand]
-    private void ClearSearch()
-    {
-        SearchText = string.Empty;
-    }
-    // ...existing code...
-
-    /// <summary>
-    /// Retorna o nome da categoria para um objeto dado seu CategoryId.
-    /// </summary>
-    public string? GetCategoryName(int? categoryId)
-    {
-        if (!categoryId.HasValue) return null;
-        var cat = Categories.Select(n => FindCategoryById(n, categoryId.Value)).FirstOrDefault(c => c != null);
-        return cat?.Name;
-    }
-
-    private CategoryNode? FindCategoryById(CategoryNode node, int id)
-    {
-        if (node.Category.Id == id) return node;
-        foreach (var child in node.Children)
-        {
-            var found = FindCategoryById(child, id);
-            if (found != null) return found;
-        }
-        return null;
-    }
-
-    // ...existing code...
-}
+/// <summary>
 /// Supported grid view sizes for the object card display.
 /// </summary>
 public enum ViewSize { Small, Medium, Large }
@@ -340,6 +306,10 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadItems(value);
     }
 
+    /// <summary>Clears the search text box.</summary>
+    [RelayCommand]
+    private void ClearSearch() => SearchText = string.Empty;
+
     partial void OnSelectedObjectChanged(Object3D? value)
     {
         _originalName = value?.Name ?? string.Empty;
@@ -617,71 +587,25 @@ public partial class MainWindowViewModel : ViewModelBase
             onProgress, onCounts, cancellationToken);
     }
 
-    public async Task ImportAttachments(string[] filePaths)
+    /// <summary>Attaches the given files to the currently selected object.</summary>
+    public Task ImportAttachments(string[] filePaths) =>
+        SelectedObject is { } obj
+            ? ImportAttachmentsTo(filePaths, [obj], string.Empty)
+            : Task.CompletedTask;
+
+    /// <summary>Attaches the given files to every object in the specified category.</summary>
+    public Task ImportAttachmentsToCategory(string[] filePaths, int categoryId)
     {
-        if (_libraryManager == null || SelectedObject == null) return;
-
-        IsBusy = true;
-        int total = filePaths.Length;
-        int imported = 0;
-
-        try
-        {
-            foreach (var path in filePaths)
-            {
-                imported++;
-                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)}";
-                await Task.Run(() => _libraryManager.ImportAttachment(SelectedObject.Id, path));
-            }
-            LoadAttachments();
-            StatusText = $"{imported} arquivo(s) anexado(s)";
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Erro ao anexar: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    public async Task ImportAttachmentsToCategory(string[] filePaths, int categoryId)
-    {
-        if (_libraryManager == null || _repository == null) return;
-
+        if (_repository == null) return Task.CompletedTask;
         var objects = _repository.GetAllObjects(categoryId: categoryId).ToList();
-        if (objects.Count == 0) return;
-
-        IsBusy = true;
-        int total = filePaths.Length;
-        int imported = 0;
-
-        try
-        {
-            foreach (var path in filePaths)
-            {
-                imported++;
-                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)} a {objects.Count} objeto(s)";
-                foreach (var obj in objects)
-                {
-                    await Task.Run(() => _libraryManager.ImportAttachment(obj.Id, path));
-                }
-            }
-            LoadAttachments();
-            StatusText = $"{imported} arquivo(s) anexado(s) a {objects.Count} objeto(s)";
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Erro ao anexar: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        return ImportAttachmentsToObjects(filePaths, objects);
     }
 
-    public async Task ImportAttachmentsToObjects(string[] filePaths, List<Object3D> objects)
+    /// <summary>Attaches the given files to each of the specified objects.</summary>
+    public Task ImportAttachmentsToObjects(string[] filePaths, List<Object3D> objects) =>
+        ImportAttachmentsTo(filePaths, objects, $" a {objects.Count} objeto(s)");
+
+    private async Task ImportAttachmentsTo(string[] filePaths, IReadOnlyList<Object3D> objects, string targetSuffix)
     {
         if (_libraryManager == null || objects.Count == 0) return;
 
@@ -694,14 +618,14 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var path in filePaths)
             {
                 imported++;
-                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)} a {objects.Count} objeto(s)";
+                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)}{targetSuffix}";
                 foreach (var obj in objects)
                 {
                     await Task.Run(() => _libraryManager.ImportAttachment(obj.Id, path));
                 }
             }
             LoadAttachments();
-            StatusText = $"{imported} arquivo(s) anexado(s) a {objects.Count} objeto(s)";
+            StatusText = $"{imported} arquivo(s) anexado(s){targetSuffix}";
         }
         catch (Exception ex)
         {

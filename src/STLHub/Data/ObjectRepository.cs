@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using STLHub.Models;
@@ -260,93 +261,60 @@ public class ObjectRepository
         connection.Execute("UPDATE Object3D SET CategoryId = @CategoryId WHERE Id = @ObjectId", new { CategoryId = categoryId, ObjectId = objectId });
     }
 
+    /// <summary>Returns all objects, optionally filtered by category and/or tag.</summary>
     public IEnumerable<Object3D> GetAllObjects(int? categoryId = null, int? tagId = null)
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        List<Object3D> results;
-        if (tagId.HasValue && categoryId.HasValue)
-        {
-            results = connection.Query<Object3D>(
-                @"SELECT o.* FROM Object3D o
-                  INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
-                  WHERE o.CategoryId = @CategoryId AND ot.TagId = @TagId
-                  ORDER BY o.CreatedAt DESC",
-                new { CategoryId = categoryId.Value, TagId = tagId.Value }).ToList();
-        }
-        else if (tagId.HasValue)
-        {
-            results = connection.Query<Object3D>(
-                @"SELECT o.* FROM Object3D o
-                  INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
-                  WHERE ot.TagId = @TagId
-                  ORDER BY o.CreatedAt DESC",
-                new { TagId = tagId.Value }).ToList();
-        }
-        else if (categoryId.HasValue)
-        {
-            results = connection.Query<Object3D>(
-                "SELECT * FROM Object3D WHERE CategoryId = @CategoryId ORDER BY CreatedAt DESC",
-                new { CategoryId = categoryId.Value }).ToList();
-        }
-        else
-        {
-            results = connection.Query<Object3D>("SELECT * FROM Object3D ORDER BY CreatedAt DESC").ToList();
-        }
-        foreach (var obj in results) ResolvePaths(obj);
-        return results;
-    }
+        => QueryObjects(null, categoryId, tagId);
 
+    /// <summary>
+    /// Full-text searches objects by name and description, optionally filtered by category
+    /// and/or tag. An empty term returns all matching objects.
+    /// </summary>
     public IEnumerable<Object3D> SearchObjects(string searchTerm, int? categoryId = null, int? tagId = null)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
-            return GetAllObjects(categoryId, tagId);
+            return QueryObjects(null, categoryId, tagId);
+
+        // Quote the term so FTS treats it as a literal phrase, then prefix-match it.
+        string term = "\"" + searchTerm.Replace("\"", "\"\"") + "\"*";
+        return QueryObjects(term, categoryId, tagId);
+    }
+
+    /// <summary>
+    /// Builds and runs an object query. When <paramref name="ftsTerm"/> is non-null the
+    /// FTS index is joined and results are ranked by relevance; otherwise they are ordered
+    /// by creation date descending.
+    /// </summary>
+    private List<Object3D> QueryObjects(string? ftsTerm, int? categoryId, int? tagId)
+    {
+        var sql = new StringBuilder("SELECT o.* FROM Object3D o");
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (ftsTerm != null)
+        {
+            sql.Append(" JOIN Object3D_FTS f ON o.Id = f.rowid");
+            conditions.Add("Object3D_FTS MATCH @Term");
+            parameters.Add("Term", ftsTerm);
+        }
+        if (tagId.HasValue)
+        {
+            sql.Append(" INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId");
+            conditions.Add("ot.TagId = @TagId");
+            parameters.Add("TagId", tagId.Value);
+        }
+        if (categoryId.HasValue)
+        {
+            conditions.Add("o.CategoryId = @CategoryId");
+            parameters.Add("CategoryId", categoryId.Value);
+        }
+
+        if (conditions.Count > 0)
+            sql.Append(" WHERE ").Append(string.Join(" AND ", conditions));
+
+        sql.Append(ftsTerm != null ? " ORDER BY rank" : " ORDER BY o.CreatedAt DESC");
 
         using var connection = new SqliteConnection(_connectionString);
-        string term = "\"" + searchTerm.Replace("\"", "\"\"") + "\"*";
-        List<Object3D> results;
-
-        if (tagId.HasValue && categoryId.HasValue)
-        {
-            results = connection.Query<Object3D>(@"
-                SELECT o.*
-                FROM Object3D o
-                JOIN Object3D_FTS f ON o.Id = f.rowid
-                INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
-                WHERE Object3D_FTS MATCH @Term AND o.CategoryId = @CategoryId AND ot.TagId = @TagId
-                ORDER BY rank;",
-                new { Term = term, CategoryId = categoryId.Value, TagId = tagId.Value }).ToList();
-        }
-        else if (tagId.HasValue)
-        {
-            results = connection.Query<Object3D>(@"
-                SELECT o.*
-                FROM Object3D o
-                JOIN Object3D_FTS f ON o.Id = f.rowid
-                INNER JOIN ObjectTag ot ON o.Id = ot.ObjectId
-                WHERE Object3D_FTS MATCH @Term AND ot.TagId = @TagId
-                ORDER BY rank;",
-                new { Term = term, TagId = tagId.Value }).ToList();
-        }
-        else if (categoryId.HasValue)
-        {
-            results = connection.Query<Object3D>(@"
-                SELECT o.*
-                FROM Object3D o
-                JOIN Object3D_FTS f ON o.Id = f.rowid
-                WHERE Object3D_FTS MATCH @Term AND o.CategoryId = @CategoryId
-                ORDER BY rank;",
-                new { Term = term, CategoryId = categoryId.Value }).ToList();
-        }
-        else
-        {
-            results = connection.Query<Object3D>(@"
-                SELECT o.*
-                FROM Object3D o
-                JOIN Object3D_FTS f ON o.Id = f.rowid
-                WHERE Object3D_FTS MATCH @Term
-                ORDER BY rank;",
-                new { Term = term }).ToList();
-        }
+        var results = connection.Query<Object3D>(sql.ToString(), parameters).ToList();
         foreach (var obj in results) ResolvePaths(obj);
         return results;
     }

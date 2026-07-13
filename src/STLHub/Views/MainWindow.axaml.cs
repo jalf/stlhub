@@ -166,7 +166,7 @@ public partial class MainWindow : Window
         return settings;
     }
 
-    private async void About_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void About_Click(object? sender, RoutedEventArgs e)
     {
         var dialog = new AboutDialog();
         await dialog.ShowDialog(this);
@@ -576,7 +576,7 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm && vm.SelectedObject != null)
         {
             var path = vm.SelectedObject.ThumbnailPath;
-            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
             {
                 var viewer = new ImageViewerWindow(path, vm.SelectedObject.Name);
                 viewer.Show(this);
