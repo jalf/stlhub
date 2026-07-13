@@ -156,6 +156,7 @@ public partial class MainWindow : Window
             settings.ViewSize = vm.CurrentViewSize.ToString();
             settings.SortOrder = vm.CurrentSortOrder.ToString();
             settings.Theme = vm.CurrentThemeKey;
+            settings.IncludeSubcategories = vm.IncludeSubcategories;
         }
 
         // Repository path is persisted via the OnRepositoryChanged callback

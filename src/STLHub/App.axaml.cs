@@ -54,6 +54,7 @@ public partial class App : Application
                 CurrentViewSize = viewSize,
                 CurrentSortOrder = sortOrder,
                 CurrentRepositoryName = repoPath,
+                IncludeSubcategories = settings.IncludeSubcategories,
             };
 
             // Set the theme option without triggering ApplyTheme (callback not set yet)

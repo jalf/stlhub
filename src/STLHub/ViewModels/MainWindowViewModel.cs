@@ -96,6 +96,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ViewSize _currentViewSize = ViewSize.Medium;
 
+    /// <summary>
+    /// When true, selecting a category also lists objects from its sub-categories.
+    /// When false (the default), only objects directly in the selected category are shown.
+    /// </summary>
+    [ObservableProperty]
+    private bool _includeSubcategories;
+
+    partial void OnIncludeSubcategoriesChanged(bool value) => LoadItems(SearchText);
+
     public List<SortOption> SortOptions { get; } =
     [
         new("Data (mais recente)", SortOrder.DateDesc),
@@ -407,7 +416,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (SelectedCategory != null)
         {
             categoryIds = [];
-            CollectCategoryAndChildrenIds(SelectedCategory, categoryIds);
+            if (IncludeSubcategories)
+                CollectCategoryAndChildrenIds(SelectedCategory, categoryIds);
+            else
+                categoryIds.Add(SelectedCategory.Category.Id);
         }
         var tagId = SelectedTag?.Id;
         var sortOrder = CurrentSortOrder;

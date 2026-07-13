@@ -20,6 +20,10 @@ public class UserSettings
     public double SidebarWidth { get; set; } = 250;
     public string ViewSize { get; set; } = "Medium";
     public string SortOrder { get; set; } = "DateDesc";
+
+    /// <summary>Whether a selected category also lists objects from its sub-categories.</summary>
+    public bool IncludeSubcategories { get; set; }
+
     public string Theme { get; set; } = "Dark";
     public string LastRepositoryPath { get; set; } = string.Empty;
     public List<string> RecentRepositories { get; set; } = new();

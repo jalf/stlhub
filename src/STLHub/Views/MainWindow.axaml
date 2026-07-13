@@ -140,6 +140,18 @@
 
                     <Border Width="1" Height="18" Background="{DynamicResource SeparatorColor}" Margin="6,0"/>
 
+                    <!-- Include Sub-categories Toggle -->
+                    <CheckBox IsChecked="{Binding IncludeSubcategories, Mode=TwoWay}"
+                              Height="32" Padding="8,0,0,0"
+                              VerticalAlignment="Center" VerticalContentAlignment="Center"
+                              ToolTip.Tip="Listar também os objetos das subpastas da pasta selecionada">
+                        <TextBlock Text="Incluir subpastas" FontSize="12"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   VerticalAlignment="Center"/>
+                    </CheckBox>
+
+                    <Border Width="1" Height="18" Background="{DynamicResource SeparatorColor}" Margin="6,0"/>
+
                     <!-- Theme Selector -->
                     <ComboBox ItemsSource="{Binding ThemeOptions}"
                               SelectedItem="{Binding SelectedThemeOption}"
