@@ -19,9 +19,11 @@
 
         <!-- Icon Geometries -->
         <StreamGeometry x:Key="FolderOpenIcon">M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-4l-2-2H4z</StreamGeometry>
-        <StreamGeometry x:Key="GridSmallIcon">M1 1h4v4H1zM7 1h4v4H7zM1 7h4v4H1zM7 7h4v4H7z</StreamGeometry>
-        <StreamGeometry x:Key="GridMediumIcon">M1 1h5v5H1zM8 1h5v5H8zM1 8h5v5H1zM8 8h5v5H8z</StreamGeometry>
-        <StreamGeometry x:Key="GridLargeIcon">M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z</StreamGeometry>
+        <!-- PathIcon scales its geometry to fill the icon box, so these must differ in cell
+             count (3x3 / 2x2 / 1) rather than cell size, and share the same 16x16 bounds. -->
+        <StreamGeometry x:Key="GridSmallIcon">M0 0h4v4H0zM6 0h4v4H6zM12 0h4v4H12zM0 6h4v4H0zM6 6h4v4H6zM12 6h4v4H12zM0 12h4v4H0zM6 12h4v4H6zM12 12h4v4H12z</StreamGeometry>
+        <StreamGeometry x:Key="GridMediumIcon">M0 0h7v7H0zM9 0h7v7H9zM0 9h7v7H0zM9 9h7v7H9z</StreamGeometry>
+        <StreamGeometry x:Key="GridLargeIcon">M0 0h16v16H0z</StreamGeometry>
         <StreamGeometry x:Key="SunIcon">M12 3V1m0 18v2M5.6 5.6L4.2 4.2m13.4 13.4l1.4 1.4M3 12H1m18 0h2M5.6 18.4l-1.4 1.4M18.4 5.6l1.4-1.4M16 12a4 4 0 11-8 0 4 4 0 018 0z</StreamGeometry>
         <StreamGeometry x:Key="MoonIcon">M12 3a6 6 0 009 9 9 9 0 01-9-9z</StreamGeometry>
     </Window.Resources>
