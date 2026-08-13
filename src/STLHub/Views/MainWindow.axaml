@@ -316,7 +316,7 @@
                                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
                                 <Setter Property="Template">
                                     <ControlTemplate>
-                                        <Grid Width="{Binding $parent[ScrollViewer].Viewport.Width}">
+                                        <Grid HorizontalAlignment="Stretch">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
@@ -594,26 +594,35 @@
 
                 <ScrollViewer Grid.Row="1" Margin="0,0,0,15" Padding="0,0,10,0">
                     <StackPanel Spacing="14">
-                        <!-- Thumbnail Preview -->
-                        <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource CardThumbnailBg}"
-                                Height="160" Cursor="Hand" DoubleTapped="DetailThumbnail_DoubleTapped"
-                                BoxShadow="0 2 10 0 #28000000">
-                            <Panel>
-                                <Image Source="{Binding SelectedObject.ThumbnailPath, Converter={StaticResource LocalImagePathConverter}}"
-                                       Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Border Background="{DynamicResource BadgeBg}"
-                                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                        Padding="8,3" CornerRadius="6,0,0,0">
-                                    <TextBlock Text="{Binding SelectedObject.FileType}" FontSize="11"
-                                               Foreground="{DynamicResource BadgeText}" FontWeight="Bold"/>
-                                </Border>
-                            </Panel>
-                        </Border>
+                        <!-- Thumbnail and path. Templated so these fields are not bound through a
+                             null SelectedObject while the panel is hidden. -->
+                        <ContentControl Content="{Binding SelectedObject}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate x:DataType="models:Object3D">
+                                    <StackPanel Spacing="14">
+                                        <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource CardThumbnailBg}"
+                                                Height="160" Cursor="Hand" DoubleTapped="DetailThumbnail_DoubleTapped"
+                                                BoxShadow="0 2 10 0 #28000000">
+                                            <Panel>
+                                                <Image Source="{Binding ThumbnailPath, Converter={StaticResource LocalImagePathConverter}}"
+                                                       Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Background="{DynamicResource BadgeBg}"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                        Padding="8,3" CornerRadius="6,0,0,0">
+                                                    <TextBlock Text="{Binding FileType}" FontSize="11"
+                                                               Foreground="{DynamicResource BadgeText}" FontWeight="Bold"/>
+                                                </Border>
+                                            </Panel>
+                                        </Border>
 
-                        <TextBlock Text="Caminho" Foreground="{DynamicResource TextSecondary}" FontSize="11"
-                                   FontWeight="SemiBold" Margin="0,0,0,-8"/>
-                        <TextBlock Text="{Binding SelectedObject.RelativeFilePath}" FontSize="10"
-                                   Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Caminho" Foreground="{DynamicResource TextSecondary}" FontSize="11"
+                                                   FontWeight="SemiBold" Margin="0,0,0,-8"/>
+                                        <TextBlock Text="{Binding RelativeFilePath}" FontSize="10"
+                                                   Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
 
                         <TextBlock Text="Nome" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,6,0,-8"/>
@@ -624,10 +633,18 @@
                         <TextBox Text="{Binding EditedDescription, Mode=TwoWay}"
                                  AcceptsReturn="True" Height="80" TextWrapping="Wrap" CornerRadius="6"/>
 
-                        <TextBlock Text="Data de criação" Foreground="{DynamicResource TextSecondary}" FontSize="11"
-                                   FontWeight="SemiBold" Margin="0,2,0,0"/>
-                        <TextBlock Text="{Binding SelectedObject.CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
-                                   Foreground="{DynamicResource TextPrimary}" FontSize="13" Margin="0,0,0,2"/>
+                        <ContentControl Content="{Binding SelectedObject}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate x:DataType="models:Object3D">
+                                    <StackPanel Spacing="14">
+                                        <TextBlock Text="Data de criação" Foreground="{DynamicResource TextSecondary}" FontSize="11"
+                                                   FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                        <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
+                                                   Foreground="{DynamicResource TextPrimary}" FontSize="13" Margin="0,0,0,2"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
 
                         <TextBlock Text="Tags" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,2,0,-8"/>
