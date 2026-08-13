@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using STLHub.Converters;
@@ -44,6 +45,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private ObjectRepository? _repository;
     private LibraryManager? _libraryManager;
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _projectInfoCts;
 
     /// <summary>Callback set by the View to display warning dialogs.</summary>
     public Func<string, string, Task>? ShowWarningAsync { get; set; }
@@ -73,7 +75,40 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _currentRepositoryName = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProjectInfo3mfVisible))]
     private Object3D? _selectedObject;
+
+    /// <summary>Metadata extracted from the selected <c>.3mf</c> file; <c>null</c> for other file types.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProjectInfo3mfVisible))]
+    [NotifyPropertyChangedFor(nameof(HasPlainDescription3mf))]
+    [NotifyPropertyChangedFor(nameof(HasRichDescription3mf))]
+    private ThreeMfProjectInfo? _projectInfo3mf;
+
+    /// <summary>
+    /// True when the description carries no HTML and can be shown directly in the panel.
+    /// </summary>
+    public bool HasPlainDescription3mf =>
+        !string.IsNullOrWhiteSpace(ProjectInfo3mf?.Description) &&
+        !HtmlDescriptionParser.HasMarkup(ProjectInfo3mf.Description);
+
+    /// <summary>
+    /// True when the description contains HTML and therefore needs the description viewer.
+    /// </summary>
+    public bool HasRichDescription3mf => HtmlDescriptionParser.HasMarkup(ProjectInfo3mf?.Description);
+
+    /// <summary>True while 3MF metadata extraction is in flight for the current selection.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProjectInfo3mfVisible))]
+    private bool _isProjectInfo3mfLoading;
+
+    /// <summary>
+    /// True when the "Informações 3MF" section should be shown: a <c>.3mf</c> file is
+    /// selected and metadata is either loading or was successfully extracted (FR-009).
+    /// </summary>
+    public bool IsProjectInfo3mfVisible =>
+        SelectedObject?.FileType.Equals(".3mf", StringComparison.OrdinalIgnoreCase) == true &&
+        (IsProjectInfo3mfLoading || ProjectInfo3mf?.HasAnyMetadata == true);
 
     private string _originalName = string.Empty;
     private string _originalDescription = string.Empty;
@@ -328,6 +363,37 @@ public partial class MainWindowViewModel : ViewModelBase
         HasUnsavedChanges = false;
         LoadAttachments();
         LoadTags();
+        LoadProjectInfo(value);
+    }
+
+    /// <summary>
+    /// Starts (or clears) the asynchronous 3MF metadata load for the newly selected object.
+    /// Any in-flight load for a previous selection is cancelled first.
+    /// </summary>
+    private void LoadProjectInfo(Object3D? value)
+    {
+        _projectInfoCts?.Cancel();
+        ProjectInfo3mf = null;
+        IsProjectInfo3mfLoading = false;
+
+        if (value?.FileType.Equals(".3mf", StringComparison.OrdinalIgnoreCase) != true) return;
+
+        _projectInfoCts = new CancellationTokenSource();
+        IsProjectInfo3mfLoading = true;
+        _ = LoadProjectInfoAsync(value.MainFilePath, _projectInfoCts.Token);
+    }
+
+    private async Task LoadProjectInfoAsync(string filePath, CancellationToken ct)
+    {
+        var info = await ThreeMfMetadataReader.ReadAsync(filePath, ct);
+        if (ct.IsCancellationRequested) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ct.IsCancellationRequested) return;
+            ProjectInfo3mf = info;
+            IsProjectInfo3mfLoading = false;
+        });
     }
 
     partial void OnSelectedCategoryChanged(CategoryNode? value)
