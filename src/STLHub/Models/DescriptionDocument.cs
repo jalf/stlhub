@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace STLHub.Models;
 
@@ -21,6 +20,9 @@ public enum DescriptionParagraphKind
     ListItem,
 }
 
+/// <summary>Base type for the inline content of a paragraph.</summary>
+public abstract record DescriptionInline;
+
 /// <summary>
 /// A styled span of text inside a paragraph. When <see cref="Href"/> is set the run is a hyperlink.
 /// </summary>
@@ -29,9 +31,6 @@ public sealed record DescriptionRun(string Text, bool Bold = false, bool Italic 
 
 /// <summary>An explicit line break (<c>br</c>) inside a paragraph.</summary>
 public sealed record DescriptionLineBreak : DescriptionInline;
-
-/// <summary>Base type for the inline content of a paragraph.</summary>
-public abstract record DescriptionInline;
 
 /// <summary>Base type for the block-level content of a description.</summary>
 public abstract record DescriptionBlock;
@@ -55,7 +54,4 @@ public sealed record DescriptionDocument(IReadOnlyList<DescriptionBlock> Blocks)
 
     /// <summary>True when the document has no renderable content.</summary>
     public bool IsEmpty => Blocks.Count == 0;
-
-    /// <summary>True when at least one image is referenced.</summary>
-    public bool HasImages => Blocks.OfType<DescriptionImage>().Any();
 }

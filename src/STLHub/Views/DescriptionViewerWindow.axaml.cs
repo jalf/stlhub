@@ -140,13 +140,12 @@ public partial class DescriptionViewerWindow : Window
 
     private Button CreateLink(string caption, string href)
     {
-        var caption_ = new TextBlock { Text = caption.Trim(), FontSize = 13 };
-        caption_.Classes.Add("linktext");
+        var label = new TextBlock { Text = caption.Trim(), FontSize = 13, Classes = { "linktext" } };
 
         var button = new Button
         {
             Classes = { "link" },
-            Content = caption_,
+            Content = label,
             Tag = href,
         };
 

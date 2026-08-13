@@ -86,16 +86,24 @@ public partial class MainWindowViewModel : ViewModelBase
     private ThreeMfProjectInfo? _projectInfo3mf;
 
     /// <summary>
+    /// Cached because the two properties below are read by bindings, and detecting markup
+    /// decodes and scans the whole description. Refreshed when the metadata changes.
+    /// </summary>
+    private bool _descriptionHasMarkup;
+
+    partial void OnProjectInfo3mfChanged(ThreeMfProjectInfo? value) =>
+        _descriptionHasMarkup = HtmlDescriptionParser.HasMarkup(value?.Description);
+
+    /// <summary>
     /// True when the description carries no HTML and can be shown directly in the panel.
     /// </summary>
     public bool HasPlainDescription3mf =>
-        !string.IsNullOrWhiteSpace(ProjectInfo3mf?.Description) &&
-        !HtmlDescriptionParser.HasMarkup(ProjectInfo3mf.Description);
+        !string.IsNullOrWhiteSpace(ProjectInfo3mf?.Description) && !_descriptionHasMarkup;
 
     /// <summary>
     /// True when the description contains HTML and therefore needs the description viewer.
     /// </summary>
-    public bool HasRichDescription3mf => HtmlDescriptionParser.HasMarkup(ProjectInfo3mf?.Description);
+    public bool HasRichDescription3mf => _descriptionHasMarkup;
 
     /// <summary>True while 3MF metadata extraction is in flight for the current selection.</summary>
     [ObservableProperty]
