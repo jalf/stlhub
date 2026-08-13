@@ -586,6 +586,18 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private async void ViewDescription_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var description = vm.ProjectInfo3mf?.Description;
+        if (string.IsNullOrWhiteSpace(description)) return;
+
+        var document = HtmlDescriptionParser.Parse(description);
+        var subtitle = vm.ProjectInfo3mf?.Title ?? vm.SelectedObject?.Name;
+        await new DescriptionViewerWindow(document, subtitle).ShowDialog(this);
+    }
+
     // Status bar hint support: shows tooltip text in the status bar on hover
 
     private string? _savedStatusText;

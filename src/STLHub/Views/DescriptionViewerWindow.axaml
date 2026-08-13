@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="STLHub.Views.DescriptionViewerWindow"
+        Title="Descrição do Projeto"
+        Width="760" Height="680"
+        MinWidth="420" MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource DetailsBg}">
+
+    <!-- Blocks are generated in code-behind, so their look is set here rather than per control. -->
+    <Window.Styles>
+        <Style Selector="StackPanel#ContentPanel TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="StackPanel#ContentPanel Button.link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <!-- Declared after the general TextBlock rule so it wins for link captions. -->
+        <Style Selector="StackPanel#ContentPanel TextBlock.linktext">
+            <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+        </Style>
+        <Style Selector="StackPanel#ContentPanel Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto, *, Auto" Margin="24">
+        <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,14">
+            <TextBlock Text="Descrição do Projeto" FontSize="18" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimary}"/>
+            <TextBlock x:Name="SubtitleText" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextMuted}"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" CornerRadius="8" Padding="16"
+                Background="{DynamicResource ContentBg}"
+                BorderBrush="{DynamicResource SeparatorColor}" BorderThickness="1">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="ContentPanel" Spacing="8"/>
+            </ScrollViewer>
+        </Border>
+
+        <Button Grid.Row="2" Content="Fechar" Click="Close_Click"
+                Width="110" Padding="12,8" Margin="0,16,0,0"
+                HorizontalAlignment="Right" CornerRadius="6"/>
+    </Grid>
+</Window>

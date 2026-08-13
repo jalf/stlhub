@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:STLHub.ViewModels"
+        xmlns:models="using:STLHub.Models"
         xmlns:conv="using:STLHub.Converters"
         xmlns:aconv="using:Avalonia.Controls.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -716,6 +717,95 @@
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                 Background="{DynamicResource ToolbarBtnBg}" Foreground="{DynamicResource TextPrimary}"
                                 CornerRadius="6" Padding="10,8"/>
+
+                        <!-- Read-only project info extracted from the selected .3mf file -->
+                        <StackPanel IsVisible="{Binding IsProjectInfo3mfVisible}" Spacing="6" Margin="0,8,0,0">
+                            <Border Height="1" Background="{DynamicResource SeparatorColor}" Margin="0,6"/>
+                            <TextBlock Text="Informações 3MF" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}"/>
+
+                            <ProgressBar IsVisible="{Binding IsProjectInfo3mfLoading}"
+                                         IsIndeterminate="True" Height="3" Margin="0,2,0,4"/>
+
+                            <!-- The template is only realized once Content is non-null, so no field
+                                 binding is ever resolved through a null ProjectInfo3mf. -->
+                            <ContentControl Content="{Binding ProjectInfo3mf}"
+                                            IsVisible="{Binding !IsProjectInfo3mfLoading}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="models:ThreeMfProjectInfo">
+                                        <StackPanel Spacing="6">
+                                            <StackPanel IsVisible="{Binding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                <TextBlock Text="Título" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                <TextBlock Text="{Binding Title}" FontSize="12" TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource TextPrimary}"/>
+                                            </StackPanel>
+                                            <StackPanel IsVisible="{Binding Designer, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                <TextBlock Text="Designer" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                <TextBlock Text="{Binding Designer}" FontSize="12" TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource TextPrimary}"/>
+                                            </StackPanel>
+
+                                            <!-- Plain-text descriptions read fine in place. -->
+                                            <StackPanel IsVisible="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).HasPlainDescription3mf}">
+                                                <TextBlock Text="Descrição" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap"
+                                                           MaxLines="8" TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding Description}"
+                                                           Foreground="{DynamicResource TextPrimary}"/>
+                                            </StackPanel>
+
+                                            <!-- HTML descriptions would show as raw markup here, so they open in a viewer. -->
+                                            <StackPanel IsVisible="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).HasRichDescription3mf}">
+                                                <TextBlock Text="Descrição" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                <Button Content="Ver descrição do projeto" Click="ViewDescription_Click"
+                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                                        Margin="0,4,0,0" FontSize="12"
+                                                        Background="{DynamicResource ToolbarBtnBg}"
+                                                        Foreground="{DynamicResource TextPrimary}"
+                                                        CornerRadius="6" Padding="10,7"/>
+                                            </StackPanel>
+
+                                            <StackPanel IsVisible="{Binding CreationDate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                <TextBlock Text="Data de Criação" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                <TextBlock Text="{Binding CreationDate}" FontSize="12"
+                                                           Foreground="{DynamicResource TextPrimary}"/>
+                                            </StackPanel>
+
+                                            <!-- Print profile fields, present only for slicer-produced files -->
+                                            <StackPanel IsVisible="{Binding HasAnyProfileData}" Spacing="6" Margin="0,6,0,0">
+                                                <TextBlock Text="Perfil de Impressão" FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextSecondary}"/>
+                                                <StackPanel IsVisible="{Binding ProfileName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock Text="Perfil" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding ProfileName}" FontSize="12" TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding LayerHeight, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock Text="Altura de Camada" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding LayerHeight}" FontSize="12"
+                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding WallCount, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock Text="Paredes" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding WallCount}" FontSize="12"
+                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding InfillPercent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock Text="Preenchimento" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding InfillPercent}" FontSize="12"
+                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding ProfileAuthor, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock Text="Autor do Perfil" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding ProfileAuthor}" FontSize="12"
+                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
 

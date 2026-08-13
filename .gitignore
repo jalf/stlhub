@@ -427,3 +427,13 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Spec Kit and AI agent tooling — generated locally, not part of the project
+.specify/
+.claude/
+.github/agents/
+.github/prompts/
+.github/copilot-instructions.md
+
+# Editor-local config (overrides the VisualStudio template's re-includes above)
+.vscode/

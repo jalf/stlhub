@@ -65,3 +65,8 @@ The app follows a layered MVVM architecture:
 - Layout: prefer `Grid`, `StackPanel`, `DockPanel`; use `Margin`/`Padding` for spacing.
 - All public APIs must have XML doc comments in English.
 - Keep XAML clean — remove unused namespaces and attributes.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
