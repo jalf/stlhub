@@ -25,7 +25,10 @@ public class ObjectRepository
         _repoPath = repoPath;
     }
 
-    /// <summary>Converts an absolute path inside the repo to a repo-relative path.</summary>
+    /// <summary>
+    /// Converts an absolute path inside the repo to a repo-relative path, stored using
+    /// forward slashes so the database is portable between Windows and macOS/Linux.
+    /// </summary>
     private string MakeRelative(string absolutePath)
     {
         if (string.IsNullOrEmpty(absolutePath) || !Path.IsPathRooted(absolutePath))
@@ -33,16 +36,21 @@ public class ObjectRepository
         string prefix = _repoPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                         + Path.DirectorySeparatorChar;
         if (absolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return absolutePath.Substring(prefix.Length);
+            return absolutePath.Substring(prefix.Length).Replace('\\', '/');
         return absolutePath;
     }
 
-    /// <summary>Resolves a repo-relative path to an absolute path.</summary>
+    /// <summary>
+    /// Resolves a repo-relative path (stored with forward slashes, possibly written by a
+    /// different OS) to an absolute path native to the current platform.
+    /// </summary>
     private string MakeAbsolute(string relativePath)
     {
         if (string.IsNullOrEmpty(relativePath) || Path.IsPathRooted(relativePath))
             return relativePath;
-        return Path.GetFullPath(Path.Combine(_repoPath, relativePath));
+        string nativeRelativePath = relativePath.Replace('\\', '/')
+            .Replace('/', Path.DirectorySeparatorChar);
+        return Path.GetFullPath(Path.Combine(_repoPath, nativeRelativePath));
     }
 
     private void ResolvePaths(Object3D obj)
