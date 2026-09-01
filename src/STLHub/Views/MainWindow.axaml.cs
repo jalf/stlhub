@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -89,8 +90,152 @@ public partial class MainWindow : Window
                         UpdateAllObjectsHighlight(vm.IsAllObjectsSelected);
                 };
                 UpdateAllObjectsHighlight(vm.IsAllObjectsSelected);
+
+                BuildNativeMenu(vm);
             }
         };
+    }
+
+    private bool _nativeMenuBuilt;
+
+    /// <summary>
+    /// Builds the native application menu bar (Arquivo / Exibir / Ajuda). macOS shows
+    /// it next to the Apple menu; Windows ignores it; Linux desktops with a global
+    /// menu bar pick it up too. The "Sobre" entry lives in the macOS application menu
+    /// and is declared in <c>App.axaml</c>.
+    /// </summary>
+    private void BuildNativeMenu(MainWindowViewModel vm)
+    {
+        if (_nativeMenuBuilt) return;
+        _nativeMenuBuilt = true;
+
+        // ── Arquivo ────────────────────────────────────────────────
+        var openLibrary = new NativeMenuItem("Abrir biblioteca…")
+        {
+            Command = vm.OpenRepositoryCommand,
+            Gesture = new KeyGesture(Key.O, KeyModifiers.Meta),
+        };
+        var closeWindow = new NativeMenuItem("Fechar janela")
+        {
+            Gesture = new KeyGesture(Key.W, KeyModifiers.Meta),
+        };
+        closeWindow.Click += (_, _) => Close();
+
+        var fileMenu = new NativeMenuItem("Arquivo")
+        {
+            Menu = Menu(openLibrary, new NativeMenuItemSeparator(), closeWindow),
+        };
+
+        // ── Exibir ─────────────────────────────────────────────────
+        NativeMenuItem viewSize(string label, string parameter, ViewSize value, Key key) =>
+            new(label)
+            {
+                ToggleType = MenuItemToggleType.Radio,
+                IsChecked = vm.CurrentViewSize == value,
+                Command = vm.SetViewSizeCommand,
+                CommandParameter = parameter,
+                Gesture = new KeyGesture(key, KeyModifiers.Meta),
+            };
+        var smallItem = viewSize("Ícones pequenos", "Small", ViewSize.Small, Key.D1);
+        var mediumItem = viewSize("Ícones médios", "Medium", ViewSize.Medium, Key.D2);
+        var largeItem = viewSize("Ícones grandes", "Large", ViewSize.Large, Key.D3);
+
+        var subcategoriesItem = new NativeMenuItem("Incluir subcategorias")
+        {
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = vm.IncludeSubcategories,
+        };
+        subcategoriesItem.Click += (_, _) => vm.IncludeSubcategories = !vm.IncludeSubcategories;
+
+        var sortItems = new List<(NativeMenuItem Item, SortOption Option)>();
+        var sortMenu = new NativeMenu();
+        foreach (var option in vm.SortOptions)
+        {
+            var captured = option;
+            var item = new NativeMenuItem(option.Label)
+            {
+                ToggleType = MenuItemToggleType.Radio,
+                IsChecked = ReferenceEquals(vm.SelectedSortOption, option),
+            };
+            item.Click += (_, _) => vm.SelectedSortOption = captured;
+            sortMenu.Items.Add(item);
+            sortItems.Add((item, option));
+        }
+
+        var themeItems = new List<(NativeMenuItem Item, ThemeOption Option)>();
+        var themeMenu = new NativeMenu();
+        foreach (var option in vm.ThemeOptions)
+        {
+            var captured = option;
+            var item = new NativeMenuItem(option.Label)
+            {
+                ToggleType = MenuItemToggleType.Radio,
+                IsChecked = ReferenceEquals(vm.SelectedThemeOption, option),
+            };
+            item.Click += (_, _) => vm.SelectedThemeOption = captured;
+            themeMenu.Items.Add(item);
+            themeItems.Add((item, option));
+        }
+
+        var viewMenu = new NativeMenuItem("Exibir")
+        {
+            Menu = Menu(
+                smallItem, mediumItem, largeItem,
+                new NativeMenuItemSeparator(),
+                subcategoriesItem,
+                new NativeMenuItemSeparator(),
+                new NativeMenuItem("Ordenar por") { Menu = sortMenu },
+                new NativeMenuItem("Tema") { Menu = themeMenu }),
+        };
+
+        // ── Ajuda ──────────────────────────────────────────────────
+        var githubItem = new NativeMenuItem("STLHub no GitHub");
+        githubItem.Click += (_, _) => OpenUrl("https://github.com/jalf/stlhub");
+        var helpMenu = new NativeMenuItem("Ajuda") { Menu = Menu(githubItem) };
+
+        NativeMenu.SetMenu(this, Menu(fileMenu, viewMenu, helpMenu));
+
+        // Keep the radio / check marks in step with the view model.
+        vm.PropertyChanged += (_, args) =>
+        {
+            switch (args.PropertyName)
+            {
+                case nameof(vm.CurrentViewSize):
+                    smallItem.IsChecked = vm.CurrentViewSize == ViewSize.Small;
+                    mediumItem.IsChecked = vm.CurrentViewSize == ViewSize.Medium;
+                    largeItem.IsChecked = vm.CurrentViewSize == ViewSize.Large;
+                    break;
+                case nameof(vm.IncludeSubcategories):
+                    subcategoriesItem.IsChecked = vm.IncludeSubcategories;
+                    break;
+                case nameof(vm.SelectedSortOption):
+                    foreach (var (item, option) in sortItems)
+                        item.IsChecked = ReferenceEquals(vm.SelectedSortOption, option);
+                    break;
+                case nameof(vm.SelectedThemeOption):
+                    foreach (var (item, option) in themeItems)
+                        item.IsChecked = ReferenceEquals(vm.SelectedThemeOption, option);
+                    break;
+            }
+        };
+    }
+
+    private static NativeMenu Menu(params NativeMenuItemBase[] items)
+    {
+        var menu = new NativeMenu();
+        foreach (var item in items)
+            menu.Items.Add(item);
+        return menu;
+    }
+
+    private static void OpenUrl(string url)
+    {
+        if (OperatingSystem.IsWindows())
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        else if (OperatingSystem.IsLinux())
+            Process.Start("xdg-open", url);
+        else if (OperatingSystem.IsMacOS())
+            Process.Start("open", url);
     }
 
     private void UpdateAllObjectsHighlight(bool isActive)

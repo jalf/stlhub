@@ -5,6 +5,13 @@
              xmlns:sty="using:Avalonia.Styling"
              RequestedThemeVariant="Dark">
 
+    <!-- macOS application menu (the bold "STLHub" menu next to the Apple menu). -->
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="Sobre o STLHub" Click="OnAboutMenuClicked"/>
+        </NativeMenu>
+    </NativeMenu.Menu>
+
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>

@@ -17,7 +17,20 @@ public partial class App : Application
 {
     public override void Initialize()
     {
+        // Names the macOS application menu ("STLHub", "Hide STLHub", "Quit STLHub")
+        // when the app runs unbundled; the .app bundle's CFBundleName covers the rest.
+        Name = "STLHub";
         AvaloniaXamlLoader.Load(this);
+    }
+
+    /// <summary>
+    /// Opens the About window from the macOS application menu item declared in
+    /// <c>App.axaml</c>.
+    /// </summary>
+    private void OnAboutMenuClicked(object? sender, EventArgs e)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
+            _ = new AboutDialog().ShowDialog(owner);
     }
 
     /// <summary>
