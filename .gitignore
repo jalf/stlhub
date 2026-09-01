@@ -437,3 +437,4 @@ FodyWeavers.xsd
 
 # Editor-local config (overrides the VisualStudio template's re-includes above)
 .vscode/
+.DS_Store
