@@ -60,30 +60,41 @@
 Prefer not to install anything? Download `STLHub-win-x64.zip` instead, unzip it anywhere, and double-click `STLHub.exe` — it runs as-is and can be removed by deleting the folder.
 
 <details>
-<summary><strong>Linux and macOS</strong></summary>
+<summary><strong>macOS</strong></summary>
 
 <br>
 
-Download the file for your system from the [latest release](https://github.com/jalf/stlhub/releases/latest):
+1. **[Download the disk image](https://github.com/jalf/stlhub/releases/latest)** for your Mac:
 
-| System | File |
-|---|---|
-| Linux | `STLHub-linux-x64.tar.gz` |
-| macOS (Apple Silicon — M1/M2/M3/M4) | `STLHub-osx-arm64.tar.gz` |
-| macOS (Intel) | `STLHub-osx-x64.tar.gz` |
+   | Mac | File |
+   |---|---|
+   | Apple Silicon (M1/M2/M3/M4) | `STLHub-osx-arm64.dmg` |
+   | Intel | `STLHub-osx-x64.dmg` |
 
-Extract it and launch the app:
+2. **Open the `.dmg`** and drag **STLHub** onto the **Applications** folder.
+3. **First launch:** right-click STLHub in Applications → **Open** → **Open**. macOS asks only once, because the app is signed but not notarized (an Apple Developer subscription we don't have) — **not** because anything is wrong with it.
+
+If macOS still says the app "is damaged" or "can't be opened", clear the quarantine flag once:
 
 ```bash
-tar -xzf STLHub-*.tar.gz
-chmod +x STLHub
-./STLHub
+xattr -dr com.apple.quarantine /Applications/STLHub.app
 ```
 
-On macOS, the app is not notarized, so Gatekeeper will refuse to open it on the first try. Remove the quarantine flag once and it will start normally:
+Prefer the command line? Download `STLHub-osx-<arch>.tar.gz` instead — it contains the same `STLHub.app`; extract it anywhere and run `open STLHub.app`.
+
+</details>
+
+<details>
+<summary><strong>Linux</strong></summary>
+
+<br>
+
+Download `STLHub-linux-x64.tar.gz` from the [latest release](https://github.com/jalf/stlhub/releases/latest), then:
 
 ```bash
-xattr -d com.apple.quarantine STLHub
+tar -xzf STLHub-linux-x64.tar.gz
+chmod +x STLHub
+./STLHub
 ```
 
 </details>

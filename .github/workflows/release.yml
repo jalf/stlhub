@@ -67,9 +67,25 @@ jobs:
         if: runner.os == 'Windows'
         run: Compress-Archive -Path publish/${{ matrix.artifact }}/* -DestinationPath ${{ matrix.artifact }}.zip
 
-      - name: Create archive (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Create archive (Linux)
+        if: runner.os == 'Linux'
         run: tar -czf ${{ matrix.artifact }}.tar.gz -C publish/${{ matrix.artifact }} .
+
+      - name: Build .app bundle and .dmg (macOS)
+        if: runner.os == 'macOS'
+        shell: pwsh
+        run: |
+          ./build/macos/package-macos.ps1 `
+            -PublishDir publish/${{ matrix.artifact }} `
+            -Version ${{ steps.version.outputs.version }} `
+            -ArtifactName ${{ matrix.artifact }} `
+            -OutputDir dist
+
+      - name: Create archive (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          tar -czf ${{ matrix.artifact }}.tar.gz -C dist STLHub.app
+          mv dist/${{ matrix.artifact }}.dmg ${{ matrix.artifact }}.dmg
 
       - name: Build installer (Windows)
         if: runner.os == 'Windows'
@@ -91,11 +107,19 @@ jobs:
         with:
           subject-path: installer-output/STLHub-Setup-${{ steps.version.outputs.version }}.exe
 
-      - name: Attest artifact (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Attest artifact (Linux)
+        if: runner.os == 'Linux'
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ matrix.artifact }}.tar.gz
+
+      - name: Attest artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -104,6 +128,7 @@ jobs:
           path: |
             ${{ matrix.artifact }}.zip
             ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.dmg
           if-no-files-found: ignore
 
       - name: Upload installer (Windows)
@@ -134,5 +159,6 @@ jobs:
           files: |
             artifacts/*.zip
             artifacts/*.tar.gz
+            artifacts/*.dmg
             artifacts/STLHub-Setup-*.exe
           fail_on_unmatched_files: true
