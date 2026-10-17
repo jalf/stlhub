@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-17T02:23:00+00:00",
+  "generatedAt": "2026-10-17T12:38:42+00:00",
   "title": "Design System: STLHub",
   "extensions": {
     "colorMeta": {
@@ -752,12 +752,53 @@
         "purpose": "Model cards in the gallery (Avalonia: 0 2 12 0 #28000000)."
       },
       {
+        "name": "model-lift",
+        "value": "0 6px 18px 0 rgba(0,0,0,0.22)",
+        "purpose": "The model card under the pointer, together with a 2px rise (Avalonia: 0 6 18 0 #38000000)."
+      },
+      {
         "name": "preview-rest",
         "value": "0 2px 10px 0 rgba(0,0,0,0.16)",
         "purpose": "Details-panel thumbnail (Avalonia: 0 2 10 0 #28000000)."
       }
     ],
-    "motion": [],
+    "motion": [
+      {
+        "name": "ease-settle",
+        "value": "cubic-bezier(0.33, 1, 0.68, 1)",
+        "purpose": "Every entrance and state change: things rise into place and settle (Avalonia CubicEaseOut). No bounce or elastic curves."
+      },
+      {
+        "name": "ease-exit",
+        "value": "cubic-bezier(0.32, 0, 0.67, 0)",
+        "purpose": "A deleted card leaving the gallery (Avalonia CubicEaseIn)."
+      },
+      {
+        "name": "duration-feedback",
+        "value": "120ms–180ms",
+        "purpose": "Selection ring 120ms, chip pop 140ms, card hover lift 150ms, details fade 160ms, drop overlay message 180ms."
+      },
+      {
+        "name": "duration-exit",
+        "value": "150ms",
+        "purpose": "Deleted card fades and shrinks to 95%; exits are faster than entrances."
+      },
+      {
+        "name": "print-reveal",
+        "value": "650ms, 80ms delay",
+        "purpose": "The one authored moment: a freshly made thumbnail is uncovered bottom-up behind a 2px amber nozzle line (PrintReveal). Plays once per object."
+      },
+      {
+        "name": "saved-hold",
+        "value": "1400ms",
+        "purpose": "How long 'Salvar Alterações' shows '✓ Salvo' after a save."
+      },
+      {
+        "name": "reduced-motion",
+        "value": ":is(Window).reduce-motion",
+        "purpose": "Set from the OS preference; drops the reveal and every lift, scale and rise while keeping fades and state colors."
+      }
+    ],
     "breakpoints": [],
     "themes": {
       "canonical": [
@@ -786,9 +827,9 @@
       "name": "Save Button",
       "kind": "button",
       "refersTo": "button-save",
-      "description": "Full-width amber save pinned to the bottom of the details panel; disabled until there are unsaved changes.",
-      "html": "<div class=\"ds-save-wrap\"><button class=\"ds-btn-save\">Salvar Alterações</button><button class=\"ds-btn-save\" disabled>Salvar Alterações</button></div>",
-      "css": ".ds-save-wrap { display: grid; gap: 10px; width: 260px; } .ds-btn-save { font-family: Inter, system-ui, sans-serif; padding: 12px; font-size: 14px; font-weight: 700; background: #E8922A; color: #1C1710; border: none; border-radius: 8px; cursor: pointer; transition: background 120ms ease-out; } .ds-btn-save:hover:not(:disabled) { background: #F0A040; } .ds-btn-save:focus-visible { outline: 2px solid #EDE8E2; outline-offset: 2px; } .ds-btn-save:disabled { background: #2B2620; color: #605850; cursor: default; }"
+      "description": "Full-width amber save pinned to the bottom of the details panel; disabled until there are unsaved changes. After a save it reads '✓ Salvo' in Ink on the disabled fill for 1.4s.",
+      "html": "<div class=\"ds-save-wrap\"><button class=\"ds-btn-save\">Salvar Alterações</button><button class=\"ds-btn-save\" disabled>Salvar Alterações</button><button class=\"ds-btn-save is-saved\" disabled><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M6.3 13.2L1.6 8.5l1.8-1.8 2.9 2.9 6.3-6.3 1.8 1.8z\"/></svg>Salvo</button></div>",
+      "css": ".ds-save-wrap { display: grid; gap: 10px; width: 260px; } .ds-btn-save { font-family: Inter, system-ui, sans-serif; padding: 12px; font-size: 14px; font-weight: 700; background: #E8922A; color: #1C1710; border: none; border-radius: 8px; cursor: pointer; transition: background 120ms ease-out; } .ds-btn-save:hover:not(:disabled) { background: #F0A040; } .ds-btn-save:focus-visible { outline: 2px solid #EDE8E2; outline-offset: 2px; } .ds-btn-save:disabled { background: #2B2620; color: #605850; cursor: default; } .ds-btn-save.is-saved { display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #EDE8E2; animation: ds-saved 180ms cubic-bezier(0.33, 1, 0.68, 1) both; } @keyframes ds-saved { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }"
     },
     {
       "name": "Danger Button",
@@ -826,17 +867,25 @@
       "name": "Model Card",
       "kind": "card",
       "refersTo": "model-card",
-      "description": "Signature gallery card: thumbnail well with docked file-type badge, category badge and model name; amber ring when selected.",
-      "html": "<div class=\"ds-cards\"><div class=\"ds-card\"><div class=\"ds-card-thumb\"><svg viewBox=\"0 0 100 80\" width=\"92\" height=\"74\" aria-hidden=\"true\"><path d=\"M50 8 L86 28 L86 56 L50 74 L14 56 L14 28 Z\" fill=\"#5E7FD8\"/><path d=\"M50 8 L86 28 L50 46 L14 28 Z\" fill=\"#8FA8EE\"/><path d=\"M50 46 L50 74 L14 56 L14 28 Z\" fill=\"#3E5BB0\"/></svg><span class=\"ds-type-badge\">.3mf</span></div><div class=\"ds-card-meta\"><span class=\"ds-cat-badge\">Mecânica</span><span class=\"ds-card-name\">Engrenagem 608</span></div></div><div class=\"ds-card is-selected\"><div class=\"ds-card-thumb\"><svg viewBox=\"0 0 100 80\" width=\"92\" height=\"74\" aria-hidden=\"true\"><circle cx=\"50\" cy=\"42\" r=\"28\" fill=\"#3FB27F\"/><circle cx=\"50\" cy=\"42\" r=\"10\" fill=\"#302820\"/></svg><span class=\"ds-type-badge\">.stl</span></div><div class=\"ds-card-meta\"><span class=\"ds-cat-badge\">Rolamentos</span><span class=\"ds-card-name\">Rolamento v2</span></div></div></div>",
-      "css": ".ds-cards { display: flex; gap: 8px; padding: 16px; background: #141210; } .ds-card { font-family: Inter, system-ui, sans-serif; position: relative; width: 180px; height: 198px; display: flex; flex-direction: column; background: #252019; border-radius: 12px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.16); overflow: hidden; cursor: pointer; } .ds-card.is-selected::after { content: ''; position: absolute; inset: 0; border: 2px solid #E8922A; border-radius: 12px; pointer-events: none; } .ds-card-thumb { position: relative; height: 132px; display: grid; place-items: center; background: #302820; } .ds-type-badge { position: absolute; right: 0; bottom: 0; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #C8C0B8; background: rgba(20,18,16,0.8); border-radius: 6px 0 0 0; } .ds-card-meta { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px 8px; } .ds-cat-badge { align-self: flex-end; padding: 2px 8px; font-size: 10px; font-weight: 500; color: #EDE8E2; background: #3A2E1C; border-radius: 8px; } .ds-card-name { font-size: 14px; font-weight: 600; color: #EDE8E2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }"
+      "description": "Signature gallery card: thumbnail well with docked file-type badge, category badge and model name. Lifts 2px with Model Lift on hover; the amber ring settles in on selection; a freshly made thumbnail prints in bottom-up behind an amber nozzle line.",
+      "html": "<div class=\"ds-cards\"><div class=\"ds-card\"><div class=\"ds-card-thumb\"><svg viewBox=\"0 0 100 80\" width=\"92\" height=\"74\" aria-hidden=\"true\"><path d=\"M50 8 L86 28 L86 56 L50 74 L14 56 L14 28 Z\" fill=\"#5E7FD8\"/><path d=\"M50 8 L86 28 L50 46 L14 28 Z\" fill=\"#8FA8EE\"/><path d=\"M50 46 L50 74 L14 56 L14 28 Z\" fill=\"#3E5BB0\"/></svg><span class=\"ds-type-badge\">.3mf</span></div><div class=\"ds-card-meta\"><span class=\"ds-cat-badge\">Mecânica</span><span class=\"ds-card-name\">Engrenagem 608</span></div></div><div class=\"ds-card is-selected\"><div class=\"ds-card-thumb\"><svg viewBox=\"0 0 100 80\" width=\"92\" height=\"74\" aria-hidden=\"true\"><circle cx=\"50\" cy=\"42\" r=\"28\" fill=\"#3FB27F\"/><circle cx=\"50\" cy=\"42\" r=\"10\" fill=\"#302820\"/></svg><span class=\"ds-type-badge\">.stl</span></div><div class=\"ds-card-meta\"><span class=\"ds-cat-badge\">Rolamentos</span><span class=\"ds-card-name\">Rolamento v2</span></div></div><div class=\"ds-card\"><div class=\"ds-card-thumb\"><svg viewBox=\"0 0 100 80\" width=\"92\" height=\"74\" aria-hidden=\"true\"><path d=\"M50 10 L80 70 L20 70 Z\" fill=\"#D8754A\"/></svg><span class=\"ds-type-badge\">.stl</span><span class=\"ds-print-cover\"></span></div><div class=\"ds-card-meta\"><span class=\"ds-cat-badge\">Suportes</span><span class=\"ds-card-name\">Cone novo</span></div></div></div>",
+      "css": ".ds-cards { display: flex; gap: 8px; padding: 16px; background: #141210; } .ds-card { font-family: Inter, system-ui, sans-serif; position: relative; width: 180px; height: 198px; display: flex; flex-direction: column; background: #252019; border-radius: 12px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.16); overflow: hidden; cursor: pointer; transition: transform 150ms cubic-bezier(0.33, 1, 0.68, 1), box-shadow 150ms cubic-bezier(0.33, 1, 0.68, 1); } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px 0 rgba(0,0,0,0.22); } .ds-card::after { content: ''; position: absolute; inset: 0; border: 2px solid #E8922A; border-radius: 12px; pointer-events: none; opacity: 0; transform: scale(0.97); transition: opacity 120ms cubic-bezier(0.33, 1, 0.68, 1), transform 140ms cubic-bezier(0.33, 1, 0.68, 1); } .ds-card.is-selected::after { opacity: 1; transform: scale(1); } .ds-card-thumb { position: relative; height: 132px; display: grid; place-items: center; background: #302820; } .ds-type-badge { position: absolute; right: 0; bottom: 0; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #C8C0B8; background: rgba(20,18,16,0.8); border-radius: 6px 0 0 0; } .ds-card-meta { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px 8px; } .ds-cat-badge { align-self: flex-end; padding: 2px 8px; font-size: 10px; font-weight: 500; color: #EDE8E2; background: #3A2E1C; border-radius: 8px; } .ds-card-name { font-size: 14px; font-weight: 600; color: #EDE8E2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-print-cover { position: absolute; inset: 0; background: #302820; border-bottom: 2px solid #E8922A; transform-origin: top; animation: ds-print 650ms 80ms cubic-bezier(0.33, 1, 0.68, 1) infinite alternate both; } @keyframes ds-print { from { transform: scaleY(1); } to { transform: scaleY(0); } } @media (prefers-reduced-motion: reduce) { .ds-card, .ds-card::after { transition: opacity 120ms; transform: none; } .ds-card:hover { transform: none; } .ds-print-cover { display: none; } }"
+    },
+    {
+      "name": "File Drop Zone",
+      "kind": "custom",
+      "refersTo": "file-drop",
+      "description": "Shown over the gallery while files are dragged onto the window: opaque canvas, 2px dashed amber outline, a title naming the action and one line naming where the files land. Fades in over 150ms; the message rises 8px.",
+      "html": "<div class=\"ds-drop\"><div class=\"ds-drop-msg\"><svg viewBox=\"0 0 16 16\" width=\"32\" height=\"32\" aria-hidden=\"true\"><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M1 3.5A1.5 1.5 0 012.5 2h3.6l1.6 1.6h5.8A1.5 1.5 0 0115 5.1v7.4a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5z M7.25 6.25h1.5V8h1.75v1.5H8.75v1.75h-1.5V9.5H5.5V8h1.75z\"/></svg><strong>Solte para importar</strong><span>As pastas viram subcategorias de “Oficina”.</span></div></div>",
+      "css": ".ds-drop { font-family: Inter, system-ui, sans-serif; position: relative; width: 420px; height: 240px; background: #141210; padding: 12px; } .ds-drop::before { content: ''; position: absolute; inset: 12px; border: 2px dashed #E8922A; border-radius: 12px; } .ds-drop-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #EDE8E2; text-align: center; animation: ds-drop-in 180ms cubic-bezier(0.33, 1, 0.68, 1) both; } .ds-drop-msg strong { font-size: 16px; font-weight: 600; } .ds-drop-msg span { max-width: 360px; font-size: 12px; color: #A09890; } @keyframes ds-drop-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } @media (prefers-reduced-motion: reduce) { .ds-drop-msg { animation-name: ds-drop-fade; } @keyframes ds-drop-fade { from { opacity: 0; } to { opacity: 1; } } }"
     },
     {
       "name": "Tag Chip",
       "kind": "chip",
       "refersTo": "tag-chip",
-      "description": "Amber-tinted pill for an object's tags, with an inline danger remove.",
-      "html": "<div class=\"ds-chips\"><span class=\"ds-chip\">engrenagem<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span><span class=\"ds-chip\">mecânica<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span><span class=\"ds-chip\">608<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span></div>",
-      "css": ".ds-chips { display: flex; flex-wrap: wrap; gap: 5px; width: 260px; } .ds-chip { font-family: Inter, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 12px; color: #EDE8E2; background: #3A2E1C; border-radius: 12px; } .ds-chip-x { width: 16px; height: 16px; padding: 0; font-size: 10px; color: #C84040; background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-chip-x:hover { background: rgba(200,64,64,0.15); } .ds-chip-x:focus-visible { outline: 2px solid #E8922A; }"
+      "description": "Amber-tinted pill for an object's tags, with an inline danger remove. A tag just added pops in from 92% (140ms).",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip\">engrenagem<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span><span class=\"ds-chip\">mecânica<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span><span class=\"ds-chip is-new\">608<button class=\"ds-chip-x\" aria-label=\"Remover tag\">✕</button></span></div>",
+      "css": ".ds-chips { display: flex; flex-wrap: wrap; gap: 5px; width: 260px; } .ds-chip { font-family: Inter, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 12px; color: #EDE8E2; background: #3A2E1C; border-radius: 12px; } .ds-chip-x { width: 16px; height: 16px; padding: 0; font-size: 10px; color: #C84040; background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-chip-x:hover { background: rgba(200,64,64,0.15); } .ds-chip-x:focus-visible { outline: 2px solid #E8922A; } .ds-chip.is-new { animation: ds-chip-pop 140ms cubic-bezier(0.33, 1, 0.68, 1) both; } @keyframes ds-chip-pop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } } @media (prefers-reduced-motion: reduce) { @keyframes ds-chip-pop { from { opacity: 0; } to { opacity: 1; } } }"
     },
     {
       "name": "Sidebar Navigation",
@@ -849,14 +898,15 @@
   ],
   "narrative": {
     "northStar": "The Filament Spool",
-    "overview": "**Creative North Star: \"The Filament Spool\"**\n\nSTLHub is styled after the printer. Its single accent is amber, like PLA glowing under an enclosure light. Its neutrals are warm browns and off-whites, like a spool core, a wooden bench and raw filament. Its structure works like a print's layers: orderly bands of toolbar, sidebar, gallery and details, stacked without fuss. It is a dense workshop catalogue for people who own hundreds or thousands of models. It is not a showroom and not a dashboard.\n\nThe chrome stays warm and quiet so the user's models are the most colorful thing on screen. Amber marks only what the user can act on next or what is currently selected: the open-library button, the save action, the selection ring and the busy indicator. Everything else is built from tonal steps of one warm neutral family, so the interface reads as a single material rather than a collection of panels. Controls are tactile and friendly: softly rounded, warmly filled, with one confident amber action per region.\n\nThe identity rejects three things. It is not a cold-grey IDE with a Microsoft-blue accent, not a corporate dashboard of identical metric cards and accent gradients, and not a neon gamer skin whose personality competes with the models.",
+    "overview": "**Creative North Star: \"The Filament Spool\"**\n\nSTLHub is styled after the printer. Its single accent is amber, like PLA glowing under an enclosure light. Its neutrals are warm browns and off-whites, like a spool core, a wooden bench and raw filament. Its structure works like a print's layers: orderly bands of toolbar, sidebar, gallery and details, stacked without fuss. It is a dense workshop catalogue for people who own hundreds or thousands of models. It is not a showroom and not a dashboard.\n\nThe chrome stays warm and quiet so the user's models are the most colorful thing on screen. Amber marks only what the user can act on next or what is currently selected: the open-library button, the save action, the selection ring and the busy indicator. Everything else is built from tonal steps of one warm neutral family, so the interface reads as a single material rather than a collection of panels. Controls are tactile and friendly: softly rounded, warmly filled, with one confident amber action per region.\n\nMotion behaves like a print coming off the bed. Things rise into place and settle on a cubic ease-out; nothing bounces, glows or loops. Motion explains feedback and change, and it has exactly one authored moment: a freshly made thumbnail printing itself in, layer by layer.\n\nThe identity rejects three things. It is not a cold-grey IDE with a Microsoft-blue accent, not a corporate dashboard of identical metric cards and accent gradients, and not a neon gamer skin whose personality competes with the models.",
     "keyCharacteristics": [
       "One warm neutral family (hue ~30–40°) from near-black bench to off-white filament. No cool greys in the canonical themes.",
       "A single amber accent, reserved for action and selection.",
       "Tonal layering for chrome. A soft shadow appears only under the user's models.",
       "Fixed-size model cards in a wrapping gallery, at three user-chosen sizes.",
       "Inter throughout, in a compact 10–18 px working range. Larger sizes are reserved for the About dialog.",
-      "Dark is the default theme. Light is its full counterpart."
+      "Dark is the default theme. Light is its full counterpart.",
+      "Feedback-sized motion (120–180ms) with one authored moment, the print-in reveal; all spatial movement yields to the OS reduce-motion setting."
     ],
     "rules": [
       {
@@ -907,6 +957,16 @@
       {
         "name": "The One Icon Set Rule",
         "body": "New UI uses the vector geometry in `App.axaml`, never emoji. A new icon joins the same family: solid fill, 16×16 bounds, similar ink weight.",
+        "section": "components"
+      },
+      {
+        "name": "The One Moment Rule",
+        "body": "The print-in reveal is the only animation longer than 200ms. New motion is feedback-sized, or it replaces the reveal as the authored moment rather than joining it.",
+        "section": "components"
+      },
+      {
+        "name": "The Gate Rule",
+        "body": "Any new transform, translate or scale animation goes under `:is(Window):not(.reduce-motion)`. Opacity and color may stay ungated.",
         "section": "components"
       }
     ],

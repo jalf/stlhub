@@ -46,6 +46,21 @@ public record ThemeOption(string Label, string Key);
 public record ConfirmRequest(string Title, string Message, string ConfirmLabel, bool IsDestructive = true);
 
 /// <summary>
+/// What dropping the files currently dragged over the window would do.
+/// </summary>
+public enum FileDropKind
+{
+    /// <summary>No file drag in progress, or the drag cannot be dropped.</summary>
+    None,
+    /// <summary>3D files become objects.</summary>
+    ImportFiles,
+    /// <summary>Folder trees become categories with their objects.</summary>
+    ImportFolders,
+    /// <summary>Non-3D files become attachments of the selected category's objects.</summary>
+    Attach,
+}
+
+/// <summary>
 /// Which placeholder the gallery shows when it has no cards.
 /// </summary>
 public enum GalleryEmptyState
@@ -77,6 +92,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Callback set by the View to display confirmation dialogs.</summary>
     public Func<ConfirmRequest, Task<bool>>? ShowConfirmAsync { get; set; }
+
+    /// <summary>
+    /// Callback set by the View to play an object's exit before it is deleted; completes when
+    /// the card has left.
+    /// </summary>
+    public Func<Object3D, Task>? AnimateRemovalAsync { get; set; }
 
     /// <summary>Callback set by the View to open a folder picker dialog.</summary>
     public Func<Task<string?>>? PickFolderAsync { get; set; }
@@ -161,6 +182,97 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnEditedDescriptionChanged(string value) =>
         HasUnsavedChanges = EditedName != _originalName || value != _originalDescription;
+
+    /// <summary>True briefly after "Salvar Alterações" succeeded, so the button confirms the save.</summary>
+    [ObservableProperty]
+    private bool _justSaved;
+
+    private CancellationTokenSource? _justSavedCts;
+
+    // A new edit means the confirmation no longer describes the fields.
+    partial void OnHasUnsavedChangesChanged(bool value)
+    {
+        if (value) ClearJustSaved();
+    }
+
+    private async void ShowJustSaved()
+    {
+        _justSavedCts?.Cancel();
+        var cts = _justSavedCts = new CancellationTokenSource();
+        JustSaved = true;
+        try { await Task.Delay(1400, cts.Token); }
+        catch (OperationCanceledException) { return; }
+        JustSaved = false;
+    }
+
+    private void ClearJustSaved()
+    {
+        _justSavedCts?.Cancel();
+        JustSaved = false;
+    }
+
+    /// <summary>What dropping the files being dragged over the window would do.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFileDropActive))]
+    [NotifyPropertyChangedFor(nameof(FileDropTitle))]
+    [NotifyPropertyChangedFor(nameof(FileDropHint))]
+    private FileDropKind _fileDropKind;
+
+    /// <summary>True while files the app can take are dragged over the window.</summary>
+    public bool IsFileDropActive => FileDropKind != FileDropKind.None;
+
+    /// <summary>Headline of the drop overlay: the action the drop performs.</summary>
+    public string FileDropTitle => FileDropKind == FileDropKind.Attach ? "Solte para anexar" : "Solte para importar";
+
+    /// <summary>Where the dropped files will end up.</summary>
+    public string FileDropHint => FileDropKind switch
+    {
+        FileDropKind.Attach when SelectedCategory != null =>
+            $"Os arquivos serão anexados a todos os objetos de “{SelectedCategory.Name}”.",
+        FileDropKind.ImportFolders when SelectedCategory != null =>
+            $"As pastas viram subcategorias de “{SelectedCategory.Name}”.",
+        FileDropKind.ImportFolders => "As pastas viram categorias da biblioteca.",
+        FileDropKind.ImportFiles when SelectedCategory != null =>
+            $"Os modelos entram em “{SelectedCategory.Name}”.",
+        FileDropKind.ImportFiles => "Os modelos entram na biblioteca, sem categoria.",
+        _ => string.Empty,
+    };
+
+    // ── Print-in reveal ──────────────────────────────────────────────────────
+    // Cards whose thumbnail was just made reveal it once, bottom-up, the first time they show.
+
+    private int? _revealAfterId;
+    private readonly HashSet<int> _revealPending = [];
+    private readonly HashSet<int> _revealed = [];
+
+    /// <summary>
+    /// Marks the start of an import: objects created from now on play the print-in reveal the
+    /// first time they are listed.
+    /// </summary>
+    public void BeginImportSession()
+    {
+        if (_repository == null) return;
+        _revealed.Clear();
+        // Animation only: a failed lookup must never block the import itself.
+        try { _revealAfterId = _repository.GetMaxObjectId(); }
+        catch { _revealAfterId = null; }
+    }
+
+    private void ResetFreshPrints()
+    {
+        _revealAfterId = null;
+        _revealPending.Clear();
+        _revealed.Clear();
+    }
+
+    private void MarkFreshPrint(Object3D item)
+    {
+        if (_revealed.Contains(item.Id)) return;
+        var isFresh = _revealPending.Remove(item.Id) || (_revealAfterId is int after && item.Id > after);
+        if (!isFresh) return;
+        item.IsFreshPrint = true;
+        _revealed.Add(item.Id);
+    }
 
     [ObservableProperty]
     private ViewSize _currentViewSize = ViewSize.Medium;
@@ -502,6 +614,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             _repository = new ObjectRepository(dbPath, repoPath);
             _libraryManager = new LibraryManager(libraryPath, _repository);
+            ResetFreshPrints();
 
             CurrentRepositoryName = repoPath;
             SelectedObject = null;
@@ -565,6 +678,7 @@ public partial class MainWindowViewModel : ViewModelBase
         EditedName = _originalName;
         EditedDescription = _originalDescription;
         HasUnsavedChanges = false;
+        ClearJustSaved();
         LoadAttachments();
         LoadTags();
         LoadProjectInfo(value);
@@ -585,8 +699,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveMetadata))]
     private void SaveMetadata()
     {
-        if (SelectedObject != null)
-            SaveEdits(SelectedObject);
+        if (SelectedObject != null && SaveEdits(SelectedObject))
+            ShowJustSaved();
     }
 
     /// <summary>
@@ -824,6 +938,7 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var item in items)
         {
             item.CategoryName = item.CategoryId.HasValue && categoryMap.TryGetValue(item.CategoryId.Value, out var catName) ? catName : null;
+            MarkFreshPrint(item);
             Items.Add(item);
         }
         IsSlowLoading = false;
@@ -885,7 +1000,11 @@ public partial class MainWindowViewModel : ViewModelBase
             .Select(a => a.FilePath);
     }
 
-    public void LoadTags()
+    /// <summary>
+    /// Reloads the selected object's tags. <paramref name="justAddedTagId"/> marks the tag that
+    /// was just added, so only its chip animates in.
+    /// </summary>
+    public void LoadTags(int? justAddedTagId = null)
     {
         ObjectTags.Clear();
         if (_repository == null || SelectedObject == null) return;
@@ -893,6 +1012,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var results = _repository.GetTagsForObject(SelectedObject.Id);
         foreach (var tag in results)
         {
+            tag.IsJustAdded = tag.Id == justAddedTagId;
             ObjectTags.Add(tag);
         }
     }
@@ -908,6 +1028,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var importedObjects = new List<Object3D>();
         if (_libraryManager == null) return importedObjects;
 
+        BeginImportSession();
         IsBusy = true;
         int total = filePaths.Length;
         int processed = 0;
@@ -1116,10 +1237,12 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        int tagId;
         try
         {
             var tag = existing ?? _repository.AddOrGetTag(name);
             _repository.AddTagToObject(SelectedObject.Id, tag.Id);
+            tagId = tag.Id;
         }
         catch (Exception ex)
         {
@@ -1128,7 +1251,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         NewTagName = string.Empty;
-        LoadTags();
+        LoadTags(tagId);
         LoadAllTags();
     }
 
@@ -1382,6 +1505,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 "Excluir")))
             return;
 
+        if (AnimateRemovalAsync != null)
+            await AnimateRemovalAsync(obj);
+
         IsBusy = true;
         StatusText = $"Excluindo “{obj.Name}”...";
 
@@ -1417,6 +1543,8 @@ public partial class MainWindowViewModel : ViewModelBase
             string newPath = await Task.Run(() => _libraryManager.RegenerateThumbnail(obj));
             obj.ThumbnailPath = newPath;
 
+            _revealed.Remove(obj.Id);
+            _revealPending.Add(obj.Id);
             LoadItems(SearchText);
 
             if (SelectedObject?.Id == obj.Id)

@@ -6,7 +6,8 @@
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        Background="{DynamicResource DetailsBg}">
 
     <Window.Styles>
         <Style Selector="PathIcon#WarningIcon">
@@ -22,7 +23,8 @@
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <PathIcon x:Name="WarningIcon" Data="{StaticResource IconWarning}" Width="26" Height="26"
                           VerticalAlignment="Center"/>
-                <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" TextWrapping="Wrap"/>
             </StackPanel>
             <TextBlock x:Name="MessageText" FontSize="13" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextSecondary}"/>

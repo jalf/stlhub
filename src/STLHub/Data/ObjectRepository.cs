@@ -226,6 +226,13 @@ public class ObjectRepository
         return connection.QuerySingle<int>("SELECT COUNT(*) FROM Object3D");
     }
 
+    /// <summary>Returns the highest object id in the library, or 0 when it is empty.</summary>
+    public int GetMaxObjectId()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.QuerySingle<int>("SELECT IFNULL(MAX(Id), 0) FROM Object3D");
+    }
+
     /// <summary>Returns how many objects carry the given tag.</summary>
     public int CountObjectsWithTag(int tagId)
     {

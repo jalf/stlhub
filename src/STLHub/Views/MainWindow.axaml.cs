@@ -5,11 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
@@ -34,6 +38,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, Drop);
         AddHandler(DragDrop.DragOverEvent, DragOver);
+        AddHandler(DragDrop.DragLeaveEvent, WindowDragLeave);
+
+        // Styles gate spatial movement on this class; see the MOTION block in MainWindow.axaml.
+        if (MotionPreference.IsReducedMotionRequested())
+            Classes.Add("reduce-motion");
 
         KeyBindings.Add(new KeyBinding
         {
@@ -50,6 +59,12 @@ public partial class MainWindow : Window
                 {
                     var dialog = new WarningDialog(title, message);
                     await dialog.ShowDialog(this);
+                };
+                vm.AnimateRemovalAsync = AnimateCardRemovalAsync;
+                vm.PropertyChanged += (_, args) =>
+                {
+                    if (args.PropertyName == nameof(MainWindowViewModel.SelectedObject) && vm.SelectedObject != null)
+                        _ = DetailsEnter.RunAsync(DetailsContent);
                 };
                 vm.ShowConfirmAsync = async request =>
                 {
@@ -381,19 +396,40 @@ public partial class MainWindow : Window
             else if (File.Exists(p)) { hasFolderOrFile = true; if (LibraryManager.Object3DExtensions.Contains(Path.GetExtension(p))) has3DFile = true; }
         }
 
-        if (!hasFolderOrFile) { e.DragEffects = DragDropEffects.None; return; }
+        var vm = DataContext as MainWindowViewModel;
+        if (!hasFolderOrFile) { e.DragEffects = DragDropEffects.None; SetFileDrop(FileDropKind.None); return; }
 
-        if (!hasFolder && !has3DFile && DataContext is MainWindowViewModel vm && vm.SelectedCategory == null)
+        if (!hasFolder && !has3DFile && vm?.SelectedCategory == null)
         {
             e.DragEffects = DragDropEffects.None;
+            SetFileDrop(FileDropKind.None);
             return;
         }
 
         e.DragEffects = DragDropEffects.Copy;
+        SetFileDrop(hasFolder ? FileDropKind.ImportFolders
+                  : has3DFile ? FileDropKind.ImportFiles
+                  : FileDropKind.Attach);
+    }
+
+    private void SetFileDrop(FileDropKind kind)
+    {
+        if (DataContext is MainWindowViewModel vm) vm.FileDropKind = kind;
+    }
+
+    // DragLeave also bubbles up when the pointer only crosses from one child to another; the
+    // drop overlay goes away only once the pointer has left the window.
+    private void WindowDragLeave(object? sender, DragEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        if (!new Rect(Bounds.Size).Contains(position))
+            SetFileDrop(FileDropKind.None);
     }
 
     private async void Drop(object? sender, DragEventArgs e)
     {
+        SetFileDrop(FileDropKind.None);
+        ClearDropTarget();
         var files = e.DataTransfer.TryGetFiles();
         if (files != null && DataContext is MainWindowViewModel vm)
         {
@@ -451,6 +487,7 @@ public partial class MainWindow : Window
 
     private async Task ImportFoldersWithDialog(MainWindowViewModel vm, List<string> folders)
     {
+        vm.BeginImportSession();
         var dialog = new ImportProgressDialog();
         var dialogTask = dialog.ShowDialog(this);
 
@@ -592,6 +629,7 @@ public partial class MainWindow : Window
                     _isDragging = true;
                     var dragData = new DataTransfer();
                     await DragDrop.DoDragDropAsync(_dragStartEvent, dragData, DragDropEffects.Move);
+                    ClearDropTarget();
                     _dragStartPoint = null;
                     _dragStartEvent = null;
                     _draggedObject = null;
@@ -609,15 +647,48 @@ public partial class MainWindow : Window
             {
                 e.DragEffects = DragDropEffects.None;
                 e.Handled = true;
+                ClearDropTarget();
                 return;
             }
         }
         e.DragEffects = DragDropEffects.Move;
         e.Handled = true;
+
+        // Only moves of the app's own objects and categories light up a row; file drags are
+        // imported by the window wherever they land.
+        if (_draggedCategory != null || _draggedObject != null)
+            SetDropTarget((sender as Control)?.FindAncestorOfType<TreeViewItem>());
+    }
+
+    // ── Drop-target highlight ─────────────────────────────────────────────────
+
+    private Control? _dropTarget;
+
+    private void SetDropTarget(Control? target)
+    {
+        if (ReferenceEquals(target, _dropTarget)) return;
+        ClearDropTarget();
+        _dropTarget = target;
+        _dropTarget?.Classes.Add("drop-target");
+    }
+
+    private void ClearDropTarget()
+    {
+        _dropTarget?.Classes.Remove("drop-target");
+        _dropTarget = null;
+    }
+
+    private void DropTarget_DragLeave(object? sender, DragEventArgs e)
+    {
+        // Leaving a child of the row also bubbles here; keep the highlight while the pointer
+        // is still over the row itself.
+        if (_dropTarget != null && !new Rect(_dropTarget.Bounds.Size).Contains(e.GetPosition(_dropTarget)))
+            ClearDropTarget();
     }
 
     private void Category_Drop(object? sender, DragEventArgs e)
     {
+        ClearDropTarget();
         var categoryNode = (sender as Control)?.DataContext as CategoryNode;
 
         if (_draggedCategory != null && categoryNode != null && DataContext is MainWindowViewModel vm)
@@ -664,6 +735,7 @@ public partial class MainWindow : Window
                     _isDragging = true;
                     var dragData = new DataTransfer();
                     await DragDrop.DoDragDropAsync(_dragStartEvent, dragData, DragDropEffects.Move);
+                    ClearDropTarget();
                     _dragStartPoint = null;
                     _dragStartEvent = null;
                     _draggedCategory = null;
@@ -675,14 +747,21 @@ public partial class MainWindow : Window
     private void RootCategory_DragOver(object? sender, DragEventArgs e)
     {
         if (_draggedCategory != null && _draggedCategory.Category.ParentCategoryId != null)
+        {
             e.DragEffects = DragDropEffects.Move;
+            SetDropTarget(sender as Control);
+        }
         else
+        {
             e.DragEffects = DragDropEffects.None;
+            ClearDropTarget();
+        }
         e.Handled = true;
     }
 
     private void RootCategory_Drop(object? sender, DragEventArgs e)
     {
+        ClearDropTarget();
         if (_draggedCategory != null && DataContext is MainWindowViewModel vm)
         {
             vm.MoveCategoryToRoot(_draggedCategory);
@@ -834,6 +913,49 @@ public partial class MainWindow : Window
             vm.StatusText = _savedStatusText;
             _savedStatusText = null;
         }
+    }
+
+    // ── Motion ───────────────────────────────────────────────────────────────
+
+    /// <summary>The details panel settles in when the selection changes, so the swap reads as one.</summary>
+    private static readonly Animation DetailsEnter = new()
+    {
+        Duration = TimeSpan.FromMilliseconds(160),
+        Easing = new CubicEaseOut(),
+        Children =
+        {
+            new KeyFrame { Cue = new Cue(0), Setters = { new Setter(OpacityProperty, 0.35) } },
+            new KeyFrame { Cue = new Cue(1), Setters = { new Setter(OpacityProperty, 1d) } },
+        },
+    };
+
+    /// <summary>
+    /// Fades and slightly shrinks a gallery card before its object is deleted. The card holds
+    /// the end state until the list reloads; a failed delete reloads it back.
+    /// </summary>
+    private async Task AnimateCardRemovalAsync(Object3D obj)
+    {
+        if (ObjectList.ContainerFromItem(obj) is not Control container) return;
+
+        var reduce = Classes.Contains("reduce-motion");
+        var from = new KeyFrame { Cue = new Cue(0), Setters = { new Setter(OpacityProperty, 1d) } };
+        var to = new KeyFrame { Cue = new Cue(1), Setters = { new Setter(OpacityProperty, 0d) } };
+        if (!reduce)
+        {
+            from.Setters.Add(new Setter(ScaleTransform.ScaleXProperty, 1d));
+            from.Setters.Add(new Setter(ScaleTransform.ScaleYProperty, 1d));
+            to.Setters.Add(new Setter(ScaleTransform.ScaleXProperty, 0.95));
+            to.Setters.Add(new Setter(ScaleTransform.ScaleYProperty, 0.95));
+        }
+
+        var exit = new Animation
+        {
+            Duration = TimeSpan.FromMilliseconds(150),
+            Easing = new CubicEaseIn(),
+            FillMode = FillMode.Forward,
+            Children = { from, to },
+        };
+        await exit.RunAsync(container);
     }
 
     // ── Thumbnail carousel on hover ───────────────────────────────────────────
