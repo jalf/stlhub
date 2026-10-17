@@ -219,6 +219,21 @@ public class ObjectRepository
             "SELECT COUNT(*) FROM Object3D WHERE CategoryId = @Id", new { Id = categoryId });
     }
 
+    /// <summary>Returns the total number of objects in the library.</summary>
+    public int CountObjects()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.QuerySingle<int>("SELECT COUNT(*) FROM Object3D");
+    }
+
+    /// <summary>Returns how many objects carry the given tag.</summary>
+    public int CountObjectsWithTag(int tagId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.QuerySingle<int>(
+            "SELECT COUNT(*) FROM ObjectTag WHERE TagId = @Id", new { Id = tagId });
+    }
+
     public Object3D? GetObjectByHash(string hash)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -271,20 +286,20 @@ public class ObjectRepository
 
     /// <summary>Returns all objects, optionally filtered by category and/or tag.</summary>
     public IEnumerable<Object3D> GetAllObjects(int? categoryId = null, int? tagId = null)
-        => QueryObjects(null, categoryId, tagId);
+        => QueryObjects(null, categoryId.HasValue ? [categoryId.Value] : null, tagId);
 
     /// <summary>
-    /// Full-text searches objects by name and description, optionally filtered by category
-    /// and/or tag. An empty term returns all matching objects.
+    /// Full-text searches objects by name and description, optionally restricted to a set of
+    /// categories and/or a tag. An empty term returns all matching objects.
     /// </summary>
-    public IEnumerable<Object3D> SearchObjects(string searchTerm, int? categoryId = null, int? tagId = null)
+    public IEnumerable<Object3D> SearchObjects(string searchTerm, IReadOnlyCollection<int>? categoryIds = null, int? tagId = null)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
-            return QueryObjects(null, categoryId, tagId);
+            return QueryObjects(null, categoryIds, tagId);
 
         // Quote the term so FTS treats it as a literal phrase, then prefix-match it.
         string term = "\"" + searchTerm.Replace("\"", "\"\"") + "\"*";
-        return QueryObjects(term, categoryId, tagId);
+        return QueryObjects(term, categoryIds, tagId);
     }
 
     /// <summary>
@@ -292,7 +307,7 @@ public class ObjectRepository
     /// FTS index is joined and results are ranked by relevance; otherwise they are ordered
     /// by creation date descending.
     /// </summary>
-    private List<Object3D> QueryObjects(string? ftsTerm, int? categoryId, int? tagId)
+    private List<Object3D> QueryObjects(string? ftsTerm, IReadOnlyCollection<int>? categoryIds, int? tagId)
     {
         var sql = new StringBuilder("SELECT o.* FROM Object3D o");
         var conditions = new List<string>();
@@ -310,10 +325,11 @@ public class ObjectRepository
             conditions.Add("ot.TagId = @TagId");
             parameters.Add("TagId", tagId.Value);
         }
-        if (categoryId.HasValue)
+        if (categoryIds != null)
         {
-            conditions.Add("o.CategoryId = @CategoryId");
-            parameters.Add("CategoryId", categoryId.Value);
+            // Dapper expands the list into "IN (@CategoryIds1, @CategoryIds2, ...)".
+            conditions.Add("o.CategoryId IN @CategoryIds");
+            parameters.Add("CategoryIds", categoryIds);
         }
 
         if (conditions.Count > 0)

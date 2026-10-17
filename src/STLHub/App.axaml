@@ -17,11 +17,171 @@
     </Application.DataTemplates>
 
     <Application.Styles>
-        <FluentTheme />
+        <!-- Fluent's own accent (checkbox, focused fields, list selection) follows each theme's
+             AccentColor instead of the operating system's blue. -->
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Dark" Accent="#E8922A"/>
+                <ColorPaletteResources x:Key="Light" Accent="#C07320"/>
+                <ColorPaletteResources x:Key="{x:Static local:AppThemes.Nord}" Accent="#5477A2"/>
+                <ColorPaletteResources x:Key="{x:Static local:AppThemes.Dracula}" Accent="#BD93F9"/>
+                <ColorPaletteResources x:Key="{x:Static local:AppThemes.SolarizedDark}" Accent="#3295DA"/>
+                <ColorPaletteResources x:Key="{x:Static local:AppThemes.SolarizedLight}" Accent="#3295DA"/>
+            </FluentTheme.Palettes>
+        </FluentTheme>
+
+        <!-- Every window (dialogs included) sits on the warm canvas, not Fluent's grey; the
+             darker canvas also lets secondary buttons read as buttons inside dialogs. -->
+        <Style Selector=":is(Window)">
+            <Setter Property="Background" Value="{DynamicResource ContentBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <!-- ═══════════ BUTTONS ═══════════
+             One button system for the whole app. Buttons never set their own colors; they pick
+             a variant class. These styles target Fluent's template part so hover / pressed /
+             disabled keep the variant instead of falling back to Fluent's cool grey.
+               (none)   secondary: warm tool-handle fill   "Fechar", "Anexar Arquivo..."
+               primary  the one amber action of a region   "Abrir", "Salvar Alterações"
+               danger   confirms a destructive action      "Excluir"
+               ghost    icon-only, transparent at rest     ⓘ, clear search, ✕
+               overlay  sits on a thumbnail/image          attachment ✕
+             ("primary", not "accent": Fluent ships its own Button.accent in system blue.)
+             Two heights only: 32px (MinHeight) for every text button, 36px for "Salvar".
+             Focus is a 2px inner ring drawn by the button's own border, so it never shifts
+             layout and always follows the corner radius. -->
+        <Style Selector="Button">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+        <!-- The fill runs under the transparent border, so a 32px button shows 32px of fill. -->
+        <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BackgroundSizing" Value="OuterBorderEdge"/>
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnHoverBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnHoverBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}"/>
+        </Style>
+        <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+        </Style>
+        <!-- An amber ring would vanish on the amber fill; filled buttons ring in TextPrimary,
+             which stands out against the surface around them in every theme. -->
+        <Style Selector="Button.primary:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnDanger}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerHoverColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnDanger}"/>
+        </Style>
+        <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnDanger}"/>
+        </Style>
+        <Style Selector="Button.danger:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
+        </Style>
+        <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBtnHoverBg}"/>
+        </Style>
+        <Style Selector="Button.ghost:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Button.overlay">
+            <Setter Property="Background" Value="{DynamicResource BadgeBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BadgeText}"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="Button.overlay:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnDanger}"/>
+        </Style>
+
+        <!-- row: full-width sidebar entry ("Todos os Objetos", "Nova Categoria"). Uses the
+             SidebarRowButton template in MainWindow; draws its own inset focus border. -->
+        <Style Selector="Button.row">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="Button.row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
+        </Style>
+        <Style Selector="Button.row.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarActiveBg}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.row:focus-visible /template/ Border#PART_Root">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+        </Style>
     </Application.Styles>
 
     <Application.Resources>
         <ResourceDictionary>
+            <!-- The checked CheckBox fills with the theme accent; its check mark takes the
+                 accent's label color instead of Fluent's fixed white. -->
+            <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="{DynamicResource TextOnAccent}"/>
+            <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="{DynamicResource TextOnAccent}"/>
+            <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="{DynamicResource TextOnAccent}"/>
+
             <ResourceDictionary.ThemeDictionaries>
                 <!-- ═══════════ DARK THEME ═══════════ -->
                 <ResourceDictionary x:Key="Dark">
@@ -47,6 +207,8 @@
                     <Color x:Key="BadgeBg">#CC141210</Color>
                     <Color x:Key="BadgeText">#C8C0B8</Color>
                     <Color x:Key="DangerColor">#C84040</Color>
+                    <Color x:Key="DangerHoverColor">#B53636</Color>
+                    <Color x:Key="TextOnDanger">#FFF8F0</Color>
                     <Color x:Key="EditBorderColor">#E8922A</Color>
                     <Color x:Key="EditBg">#302820</Color>
                 </ResourceDictionary>
@@ -64,7 +226,7 @@
                     <Color x:Key="CardThumbnailBg">#EAE4DC</Color>
                     <Color x:Key="TagBg">#FAEEDD</Color>
                     <Color x:Key="AccentColor">#C07320</Color>
-                    <Color x:Key="AccentHoverColor">#A86018</Color>
+                    <Color x:Key="AccentHoverColor">#D17D23</Color>
                     <Color x:Key="ToolbarBtnBg">#E0D8D0</Color>
                     <Color x:Key="ToolbarBtnHoverBg">#D4CAC0</Color>
                     <Color x:Key="TextPrimary">#1C1810</Color>
@@ -75,6 +237,8 @@
                     <Color x:Key="BadgeBg">#CC1C1810</Color>
                     <Color x:Key="BadgeText">#F0EBE4</Color>
                     <Color x:Key="DangerColor">#C83030</Color>
+                    <Color x:Key="DangerHoverColor">#B02828</Color>
+                    <Color x:Key="TextOnDanger">#FFFFFF</Color>
                     <Color x:Key="EditBorderColor">#C07320</Color>
                     <Color x:Key="EditBg">#FEFCF9</Color>
                 </ResourceDictionary>
@@ -91,18 +255,20 @@
                     <Color x:Key="CardBg">#3B4252</Color>
                     <Color x:Key="CardThumbnailBg">#434C5E</Color>
                     <Color x:Key="TagBg">#4C566A</Color>
-                    <Color x:Key="AccentColor">#5E81AC</Color>
-                    <Color x:Key="AccentHoverColor">#81A1C1</Color>
+                    <Color x:Key="AccentColor">#5477A2</Color>
+                    <Color x:Key="AccentHoverColor">#4D6D95</Color>
                     <Color x:Key="ToolbarBtnBg">#434C5E</Color>
                     <Color x:Key="ToolbarBtnHoverBg">#4C566A</Color>
                     <Color x:Key="TextPrimary">#ECEFF4</Color>
                     <Color x:Key="TextSecondary">#D8DEE9</Color>
                     <Color x:Key="TextMuted">#4C566A</Color>
-                    <Color x:Key="TextOnAccent">#ECEFF4</Color>
+                    <Color x:Key="TextOnAccent">#FFFFFF</Color>
                     <Color x:Key="SeparatorColor">#4C566A</Color>
                     <Color x:Key="BadgeBg">#CC2E3440</Color>
                     <Color x:Key="BadgeText">#D8DEE9</Color>
                     <Color x:Key="DangerColor">#BF616A</Color>
+                    <Color x:Key="DangerHoverColor">#AD535C</Color>
+                    <Color x:Key="TextOnDanger">#FFFFFF</Color>
                     <Color x:Key="EditBorderColor">#5E81AC</Color>
                     <Color x:Key="EditBg">#434C5E</Color>
                 </ResourceDictionary>
@@ -126,11 +292,13 @@
                     <Color x:Key="TextPrimary">#F8F8F2</Color>
                     <Color x:Key="TextSecondary">#BFBFBF</Color>
                     <Color x:Key="TextMuted">#6272A4</Color>
-                    <Color x:Key="TextOnAccent">#F8F8F2</Color>
+                    <Color x:Key="TextOnAccent">#21222C</Color>
                     <Color x:Key="SeparatorColor">#44475A</Color>
                     <Color x:Key="BadgeBg">#CC21222C</Color>
                     <Color x:Key="BadgeText">#F8F8F2</Color>
                     <Color x:Key="DangerColor">#FF5555</Color>
+                    <Color x:Key="DangerHoverColor">#FF6E6E</Color>
+                    <Color x:Key="TextOnDanger">#21222C</Color>
                     <Color x:Key="EditBorderColor">#BD93F9</Color>
                     <Color x:Key="EditBg">#44475A</Color>
                 </ResourceDictionary>
@@ -147,18 +315,20 @@
                     <Color x:Key="CardBg">#073642</Color>
                     <Color x:Key="CardThumbnailBg">#0A4A5A</Color>
                     <Color x:Key="TagBg">#586E75</Color>
-                    <Color x:Key="AccentColor">#268BD2</Color>
-                    <Color x:Key="AccentHoverColor">#2AA198</Color>
+                    <Color x:Key="AccentColor">#3295DA</Color>
+                    <Color x:Key="AccentHoverColor">#449EDD</Color>
                     <Color x:Key="ToolbarBtnBg">#0A4A5A</Color>
                     <Color x:Key="ToolbarBtnHoverBg">#586E75</Color>
                     <Color x:Key="TextPrimary">#FDF6E3</Color>
                     <Color x:Key="TextSecondary">#93A1A1</Color>
                     <Color x:Key="TextMuted">#586E75</Color>
-                    <Color x:Key="TextOnAccent">#FDF6E3</Color>
+                    <Color x:Key="TextOnAccent">#002B36</Color>
                     <Color x:Key="SeparatorColor">#586E75</Color>
                     <Color x:Key="BadgeBg">#CC002B36</Color>
                     <Color x:Key="BadgeText">#93A1A1</Color>
                     <Color x:Key="DangerColor">#DC322F</Color>
+                    <Color x:Key="DangerHoverColor">#C42B28</Color>
+                    <Color x:Key="TextOnDanger">#FFFFFF</Color>
                     <Color x:Key="EditBorderColor">#268BD2</Color>
                     <Color x:Key="EditBg">#0A4A5A</Color>
                 </ResourceDictionary>
@@ -175,18 +345,20 @@
                     <Color x:Key="CardBg">#FDF6E3</Color>
                     <Color x:Key="CardThumbnailBg">#EEE8D5</Color>
                     <Color x:Key="TagBg">#EEE8D5</Color>
-                    <Color x:Key="AccentColor">#268BD2</Color>
-                    <Color x:Key="AccentHoverColor">#2AA198</Color>
+                    <Color x:Key="AccentColor">#3295DA</Color>
+                    <Color x:Key="AccentHoverColor">#449EDD</Color>
                     <Color x:Key="ToolbarBtnBg">#E6DFC8</Color>
                     <Color x:Key="ToolbarBtnHoverBg">#D6CFBA</Color>
                     <Color x:Key="TextPrimary">#073642</Color>
                     <Color x:Key="TextSecondary">#586E75</Color>
                     <Color x:Key="TextMuted">#93A1A1</Color>
-                    <Color x:Key="TextOnAccent">#FDF6E3</Color>
+                    <Color x:Key="TextOnAccent">#002B36</Color>
                     <Color x:Key="SeparatorColor">#D6CFBA</Color>
                     <Color x:Key="BadgeBg">#CCEEE8D5</Color>
                     <Color x:Key="BadgeText">#586E75</Color>
                     <Color x:Key="DangerColor">#DC322F</Color>
+                    <Color x:Key="DangerHoverColor">#C42B28</Color>
+                    <Color x:Key="TextOnDanger">#FFFFFF</Color>
                     <Color x:Key="EditBorderColor">#268BD2</Color>
                     <Color x:Key="EditBg">#FDF6E3</Color>
                 </ResourceDictionary>

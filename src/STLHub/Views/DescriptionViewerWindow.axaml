@@ -47,7 +47,8 @@
         </Border>
 
         <Button Grid.Row="2" Content="Fechar" Click="Close_Click"
-                Width="110" Padding="12,8" Margin="0,16,0,0"
-                HorizontalAlignment="Right" CornerRadius="6"/>
+                IsDefault="True"
+                MinWidth="100" Margin="0,16,0,0"
+                HorizontalAlignment="Right"/>
     </Grid>
 </Window>

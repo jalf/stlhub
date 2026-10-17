@@ -3,12 +3,14 @@ using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using STLHub.Services;
 
 namespace STLHub.Views;
 
 /// <summary>
 /// Modal dialog showing folder import progress with cancellation support.
-/// Displays a progress bar, current file name, and object/attachment counts.
+/// Displays a progress bar, the current file name, and running counts of imported objects,
+/// attachments and skipped duplicates. Esc cancels the import, or closes once it has ended.
 /// </summary>
 public partial class ImportProgressDialog : Window
 {
@@ -26,48 +28,43 @@ public partial class ImportProgressDialog : Window
         Dispatcher.UIThread.Post(() => StatusText.Text = fileName);
     }
 
-    public void UpdateCounts(int objects, int attachments)
+    /// <summary>Shows the running totals; may be called from any thread.</summary>
+    public void UpdateCounts(FolderImportResult counts)
     {
-        Dispatcher.UIThread.Post(() =>
-            CountText.Text = $"{objects} objeto(s), {attachments} anexo(s)");
+        var text = $"{Plural.Count(counts.ObjectsImported, "objeto", "objetos")} · " +
+                   $"{Plural.Count(counts.AttachmentsImported, "anexo", "anexos")}";
+        if (counts.DuplicatesSkipped > 0)
+            text += $" · {Plural.Count(counts.DuplicatesSkipped, "já estava", "já estavam")} na biblioteca";
+        Dispatcher.UIThread.Post(() => CountText.Text = text);
     }
 
-    public void SetFinished(int objects, int attachments)
+    /// <summary>Switches the dialog to its finished state with a summary of the import.</summary>
+    public void SetFinished(string summary) =>
+        ShowOutcome("Importação concluída", summary, progress: 100);
+
+    /// <summary>Switches the dialog to its cancelled state, keeping what was imported so far.</summary>
+    public void SetCancelled(string summary) =>
+        ShowOutcome("Importação cancelada", summary, progress: 0);
+
+    /// <summary>Switches the dialog to its error state: what went wrong, and what was imported before it.</summary>
+    public void SetError(string reason, string importedSoFar) =>
+        ShowOutcome("A importação parou", $"{reason}\n\n{importedSoFar}", progress: 0);
+
+    private void ShowOutcome(string title, string message, double progress)
     {
         Dispatcher.UIThread.Post(() =>
         {
-            TitleText.Text = "Importação concluída";
-            StatusText.Text = $"{objects} objeto(s) e {attachments} anexo(s) importados.";
-            CountText.IsVisible = false;
-            ProgressBar.IsIndeterminate = false;
-            ProgressBar.Value = 100;
-            CancelButton.Content = "Fechar";
-        });
-    }
-
-    public void SetError(string message)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            TitleText.Text = "Erro na importação";
+            TitleText.Text = title;
             StatusText.Text = message;
+            StatusText.TextTrimming = Avalonia.Media.TextTrimming.None;
+            StatusText.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
             CountText.IsVisible = false;
             ProgressBar.IsIndeterminate = false;
-            ProgressBar.Value = 0;
+            ProgressBar.Value = progress;
             CancelButton.Content = "Fechar";
-        });
-    }
-
-    public void SetCancelled(int objects, int attachments)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            TitleText.Text = "Importação cancelada";
-            StatusText.Text = $"{objects} objeto(s) e {attachments} anexo(s) importados antes do cancelamento.";
-            CountText.IsVisible = false;
-            ProgressBar.IsIndeterminate = false;
-            ProgressBar.Value = 0;
-            CancelButton.Content = "Fechar";
+            CancelButton.IsEnabled = true;
+            CancelButton.IsDefault = true;
+            CancelButton.Focus();
         });
     }
 

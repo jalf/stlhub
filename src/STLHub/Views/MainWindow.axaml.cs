@@ -8,11 +8,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using STLHub.Models;
 using STLHub.Services;
 using STLHub.ViewModels;
@@ -25,13 +25,21 @@ namespace STLHub.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private LoadingDialog? _loadingDialog;
+    /// <summary>Command modifier of the platform: ⌘ on macOS, Ctrl elsewhere.</summary>
+    private static readonly KeyModifiers CommandModifier =
+        OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
 
     public MainWindow()
     {
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, Drop);
         AddHandler(DragDrop.DragOverEvent, DragOver);
+
+        KeyBindings.Add(new KeyBinding
+        {
+            Gesture = new KeyGesture(Key.F, CommandModifier),
+            Command = new RelayCommand(FocusSearch),
+        });
 
         // Wire up View callbacks once DataContext is available
         DataContextChanged += (_, _) =>
@@ -43,9 +51,9 @@ public partial class MainWindow : Window
                     var dialog = new WarningDialog(title, message);
                     await dialog.ShowDialog(this);
                 };
-                vm.ShowConfirmAsync = async (title, message) =>
+                vm.ShowConfirmAsync = async request =>
                 {
-                    var dialog = new ConfirmationDialog(title, message);
+                    var dialog = new ConfirmationDialog(request);
                     await dialog.ShowDialog(this);
                     return dialog.Result;
                 };
@@ -61,17 +69,6 @@ public partial class MainWindow : Window
                     return folders.FirstOrDefault()?.TryGetLocalPath();
                 };
 
-                vm.ShowLoadingDialog = () =>
-                {
-                    _loadingDialog = new LoadingDialog();
-                    _ = _loadingDialog.ShowDialog(this);
-                };
-                vm.CloseLoadingDialog = () =>
-                {
-                    _loadingDialog?.Close();
-                    _loadingDialog = null;
-                };
-
                 vm.FocusCategoryEditBox = () =>
                 {
                     Dispatcher.UIThread.Post(() =>
@@ -84,16 +81,80 @@ public partial class MainWindow : Window
                     }, DispatcherPriority.Input);
                 };
 
-                vm.PropertyChanged += (_, args) =>
-                {
-                    if (args.PropertyName == nameof(vm.IsAllObjectsSelected))
-                        UpdateAllObjectsHighlight(vm.IsAllObjectsSelected);
-                };
-                UpdateAllObjectsHighlight(vm.IsAllObjectsSelected);
-
                 BuildNativeMenu(vm);
             }
         };
+    }
+
+    /// <summary>Saves in-progress name/description edits before the window goes away.</summary>
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        (DataContext as MainWindowViewModel)?.CommitPendingEdits();
+        base.OnClosing(e);
+    }
+
+    private void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not MainWindowViewModel vm) return;
+
+        // First Esc clears the query; a second one hands focus back to the gallery.
+        if (!string.IsNullOrEmpty(vm.SearchText))
+            vm.SearchText = string.Empty;
+        else
+            ObjectList.Focus();
+        e.Handled = true;
+    }
+
+    private void ObjectList_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedObject is not { } obj) return;
+
+        switch (e.Key)
+        {
+            case Key.Enter:
+                vm.OpenFileInSystemCommand.Execute(obj.MainFilePath);
+                e.Handled = true;
+                break;
+            case Key.Delete:
+            case Key.Back:
+                vm.DeleteObjectCommand.Execute(obj);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void TagList_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Delete or Key.Back) ||
+            DataContext is not MainWindowViewModel vm || vm.SelectedTag is not { } tag) return;
+
+        vm.DeleteTagGlobalCommand.Execute(tag);
+        e.Handled = true;
+    }
+
+    private void CategoryTree_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedCategory is not { } node || node.IsEditing) return;
+
+        switch (e.Key)
+        {
+            case Key.F2:
+                vm.RenameCategoryCommand.Execute(node);
+                vm.FocusCategoryEditBox?.Invoke();
+                e.Handled = true;
+                break;
+            case Key.Delete:
+            case Key.Back:
+                vm.DeleteCategoryCommand.Execute(node);
+                e.Handled = true;
+                break;
+        }
     }
 
     private bool _nativeMenuBuilt;
@@ -238,24 +299,6 @@ public partial class MainWindow : Window
             Process.Start("open", url);
     }
 
-    private void UpdateAllObjectsHighlight(bool isActive)
-    {
-        var border = this.FindControl<Border>("AllObjectsBorder");
-        var label = this.FindControl<TextBlock>("AllObjectsLabel");
-        if (border == null) return;
-
-        if (isActive && this.TryFindResource("SidebarActiveBg", ActualThemeVariant, out var res) && res is Color color)
-        {
-            border.Background = new SolidColorBrush(color);
-            if (label != null) label.FontWeight = FontWeight.SemiBold;
-        }
-        else
-        {
-            border.Background = Brushes.Transparent;
-            if (label != null) label.FontWeight = FontWeight.Normal;
-        }
-    }
-
     public void ApplySettings(UserSettings settings)
     {
         Width = settings.WindowWidth;
@@ -314,6 +357,8 @@ public partial class MainWindow : Window
 
     private async void About_Click(object? sender, RoutedEventArgs e)
     {
+        // The dialog takes the pointer, so the button never sees PointerExited; drop its hint now.
+        RestoreHint();
         var dialog = new AboutDialog();
         await dialog.ShowDialog(this);
     }
@@ -392,14 +437,12 @@ public partial class MainWindow : Window
             {
                 // Non-3D only: confirm, then attach to all objects in the selected category
                 var categoryName = vm.SelectedCategory.Name;
-                var count = otherFiles.Count;
-                var message = $"Deseja anexar {count} arquivo(s) a todos os objetos da categoria \"{categoryName}\"?";
+                var fileCount = Plural.Count(otherFiles.Count, "arquivo", "arquivos");
+                var message = $"Anexar {fileCount} a todos os objetos da categoria “{categoryName}”?";
 
-                if (vm.ShowConfirmAsync != null)
-                {
-                    bool confirmed = await vm.ShowConfirmAsync("Anexar arquivos", message);
-                    if (!confirmed) return;
-                }
+                if (vm.ShowConfirmAsync == null ||
+                    !await vm.ShowConfirmAsync(new ConfirmRequest("Anexar arquivos", message, "Anexar", IsDestructive: false)))
+                    return;
 
                 await vm.ImportAttachmentsToCategory([.. otherFiles], vm.SelectedCategory.Category.Id);
             }
@@ -413,10 +456,16 @@ public partial class MainWindow : Window
 
         _ = Task.Run(() =>
         {
-            int totalObjects = 0;
-            int totalAttachments = 0;
-            int? lastCreatedCategoryId = null;
+            // Totals of the folders already finished; the running folder reports on top of them.
+            var done = new FolderImportResult(0, 0, 0, null);
+            FolderImportResult Add(FolderImportResult a, FolderImportResult b) => new(
+                a.ObjectsImported + b.ObjectsImported,
+                a.AttachmentsImported + b.AttachmentsImported,
+                a.DuplicatesSkipped + b.DuplicatesSkipped,
+                b.CreatedCategoryId ?? a.CreatedCategoryId);
 
+            var running = done;
+            string summary;
             try
             {
                 foreach (var folder in folders)
@@ -426,31 +475,30 @@ public partial class MainWindow : Window
                     var result = vm.RunImportFolder(
                         folder,
                         dialog.UpdateStatus,
-                        (obj, att) => dialog.UpdateCounts(totalObjects + obj, totalAttachments + att),
+                        partial => dialog.UpdateCounts(running = Add(done, partial)),
                         dialog.CancellationToken);
 
-                    totalObjects += result.objectsImported;
-                    totalAttachments += result.attachmentsImported;
-                    lastCreatedCategoryId = result.createdCategoryId ?? lastCreatedCategoryId;
+                    done = running = Add(done, result);
                 }
 
-                if (dialog.CancellationToken.IsCancellationRequested)
-                    dialog.SetCancelled(totalObjects, totalAttachments);
-                else
-                    dialog.SetFinished(totalObjects, totalAttachments);
+                summary = MainWindowViewModel.DescribeFolderImport(done);
+                dialog.SetFinished(summary);
             }
             catch (OperationCanceledException)
             {
-                dialog.SetCancelled(totalObjects, totalAttachments);
+                summary = $"Importação cancelada. {MainWindowViewModel.DescribeFolderImport(running)}";
+                dialog.SetCancelled(summary);
             }
             catch (Exception ex)
             {
-                dialog.SetError(ex.Message);
+                summary = $"A importação parou: {ErrorMessages.Describe(ex)} {MainWindowViewModel.DescribeFolderImport(running)}";
+                dialog.SetError(ErrorMessages.Describe(ex), MainWindowViewModel.DescribeFolderImport(running));
             }
 
             Dispatcher.UIThread.Post(() =>
             {
-                vm.LoadCategories(lastCreatedCategoryId);
+                vm.StatusText = summary;
+                vm.LoadCategories(running.CreatedCategoryId);
                 vm.LoadItems(vm.SearchText);
             });
         });
@@ -652,23 +700,6 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private void AllObjects_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm)
-        {
-            vm.SelectedCategory = null;
-            vm.SelectedTag = null;
-        }
-    }
-
-    private void AddRootCategory_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm)
-        {
-            vm.AddRootCategoryCommand.Execute(null);
-        }
-    }
-
     private void CategoryLabel_DoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control control && control.DataContext is CategoryNode node)
@@ -701,7 +732,8 @@ public partial class MainWindow : Window
             }
             else if (e.Key == Key.Escape)
             {
-                node.IsEditing = false;
+                // Restores the old name; the LostFocus that follows finds nothing to commit.
+                node.CancelEdit();
                 e.Handled = true;
             }
         }
@@ -793,7 +825,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void HintPointerExited(object? sender, PointerEventArgs e)
+    private void HintPointerExited(object? sender, PointerEventArgs e) => RestoreHint();
+
+    private void RestoreHint()
     {
         if (DataContext is MainWindowViewModel vm && !vm.IsBusy && _savedStatusText != null)
         {

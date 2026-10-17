@@ -2,13 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="STLHub.Views.ConfirmationDialog"
         Title="Confirmação"
-        Width="420" Height="200"
+        Width="420" MinHeight="180"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         ShowInTaskbar="False">
 
     <Grid RowDefinitions="*, Auto" Margin="24">
-        <StackPanel Grid.Row="0" Spacing="12" VerticalAlignment="Center">
+        <StackPanel Grid.Row="0" Spacing="12" Margin="0,0,0,20">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="⚠" FontSize="28" Foreground="#FFC107" VerticalAlignment="Center"/>
                 <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
@@ -17,18 +18,15 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="Cancelar"
-                    Width="90"
-                    Padding="12,8"
-                    CornerRadius="6"
+            <Button x:Name="CancelButton"
+                    Content="Cancelar"
+                    MinWidth="90"
+                    IsCancel="True"
                     Click="Cancel_Click"/>
-            <Button Content="Confirmar"
-                    Width="90"
-                    Padding="12,8"
-                    Background="{DynamicResource DangerColor}"
-                    Foreground="{DynamicResource TextOnAccent}"
-                    FontWeight="Bold"
-                    CornerRadius="6"
+            <!-- "danger" or "primary" is added in code from the request. -->
+            <Button x:Name="ConfirmButton"
+                    Content="Confirmar"
+                    MinWidth="90"
                     Click="Confirm_Click"/>
         </StackPanel>
     </Grid>

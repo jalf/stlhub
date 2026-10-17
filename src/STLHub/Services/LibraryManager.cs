@@ -36,17 +36,27 @@ public partial class LibraryManager
         Directory.CreateDirectory(_thumbnailsPath);
     }
 
-    public Object3D? ImportFile(string sourceFilePath, int? categoryId = null)
+    /// <summary>
+    /// Imports a single 3D file into the library. A file whose hash is already catalogued is
+    /// not imported again; the result then carries the existing object and
+    /// <see cref="FileImportResult.IsDuplicate"/> set.
+    /// </summary>
+    public FileImportResult ImportFile(string sourceFilePath, int? categoryId = null)
     {
-        if (!File.Exists(sourceFilePath)) return null;
+        if (!File.Exists(sourceFilePath)) return new FileImportResult(null, false);
 
-        var fileInfo = new FileInfo(sourceFilePath);
         string hash = CalculateHash(sourceFilePath);
-
-        // Skip duplicate
         var existing = _repository.GetObjectByHash(hash);
-        if (existing != null) return existing;
-        
+        if (existing != null) return new FileImportResult(existing, true);
+
+        return new FileImportResult(ImportNewFile(sourceFilePath, hash, categoryId), false);
+    }
+
+    /// <summary>Copies a file already known not to be catalogued and registers it.</summary>
+    private Object3D ImportNewFile(string sourceFilePath, string hash, int? categoryId)
+    {
+        var fileInfo = new FileInfo(sourceFilePath);
+
         string destinationFileName = $"{hash}{fileInfo.Extension}";
         string destinationFilePath = Path.Combine(_libraryPath, destinationFileName);
 
@@ -74,28 +84,35 @@ public partial class LibraryManager
 
     /// <summary>
     /// Imports a folder recursively: sub-folders become categories, 3D files become objects,
-    /// and remaining files are attached to the 3D objects in the same folder.
+    /// and remaining files are attached to the 3D objects in the same folder. Files already in
+    /// the library are skipped and counted, and a folder whose 3D files are all duplicates
+    /// creates no category.
     /// </summary>
-    public (int objectsImported, int attachmentsImported, int? createdCategoryId) ImportFolder(
+    public FolderImportResult ImportFolder(
         string folderPath, int? parentCategoryId,
         Action<string>? onProgress = null,
-        Action<int, int>? onCounts = null,
+        Action<FolderImportResult>? onCounts = null,
         CancellationToken cancellationToken = default)
     {
-        int objectsImported = 0;
-        int attachmentsImported = 0;
-        int? firstCreatedCategoryId = null;
+        var counts = new FolderImportCounter();
+        ImportFolderRecursive(folderPath, parentCategoryId, onProgress, onCounts, counts, cancellationToken);
+        return counts.ToResult();
+    }
 
-        ImportFolderRecursive(folderPath, parentCategoryId, onProgress, onCounts,
-            ref objectsImported, ref attachmentsImported, ref firstCreatedCategoryId, cancellationToken);
+    /// <summary>Mutable running totals shared across the recursive folder walk.</summary>
+    private sealed class FolderImportCounter
+    {
+        public int Objects;
+        public int Attachments;
+        public int Duplicates;
+        public int? FirstCreatedCategoryId;
 
-        return (objectsImported, attachmentsImported, firstCreatedCategoryId);
+        public FolderImportResult ToResult() => new(Objects, Attachments, Duplicates, FirstCreatedCategoryId);
     }
 
     private void ImportFolderRecursive(string folderPath, int? parentCategoryId,
-        Action<string>? onProgress, Action<int, int>? onCounts,
-        ref int objectsImported, ref int attachmentsImported,
-        ref int? firstCreatedCategoryId,
+        Action<string>? onProgress, Action<FolderImportResult>? onCounts,
+        FolderImportCounter counts,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -107,49 +124,53 @@ public partial class LibraryManager
         foreach (var f in allFiles)
             (Object3DExtensions.Contains(Path.GetExtension(f)) ? object3DFiles : otherFiles).Add(f);
 
-        // Only create a category if this folder directly contains 3D files
+        // The folder's category is created on its first new 3D file, so a folder that holds
+        // only duplicates (or no 3D files at all) never leaves an empty category behind.
         int? categoryId = null;
-        if (object3DFiles.Count > 0)
+        var importedObjects = new List<Object3D>();
+        foreach (var file in object3DFiles)
         {
-            string folderName = Path.GetFileName(folderPath);
-            var category = new Category
-            {
-                Name = SanitizeName(folderName),
-                ParentCategoryId = parentCategoryId
-            };
-            _repository.AddCategory(category);
-            categoryId = category.Id;
-            firstCreatedCategoryId ??= category.Id;
+            cancellationToken.ThrowIfCancellationRequested();
+            onProgress?.Invoke(Path.GetFileName(file));
 
-            // Import 3D files
-            var importedObjects = new List<Object3D>();
-            foreach (var file in object3DFiles)
+            string hash = CalculateHash(file);
+            if (_repository.GetObjectByHash(hash) != null)
+            {
+                counts.Duplicates++;
+                onCounts?.Invoke(counts.ToResult());
+                continue;
+            }
+
+            if (categoryId == null)
+            {
+                var category = new Category
+                {
+                    Name = SanitizeName(Path.GetFileName(folderPath)),
+                    ParentCategoryId = parentCategoryId
+                };
+                _repository.AddCategory(category);
+                categoryId = category.Id;
+                counts.FirstCreatedCategoryId ??= category.Id;
+            }
+
+            importedObjects.Add(ImportNewFile(file, hash, categoryId));
+            counts.Objects++;
+            onCounts?.Invoke(counts.ToResult());
+        }
+
+        // Attach other files only to the objects imported now; duplicates already have theirs.
+        if (importedObjects.Count > 0 && otherFiles.Count > 0)
+        {
+            foreach (var file in otherFiles)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 onProgress?.Invoke(Path.GetFileName(file));
-                var obj = ImportFile(file, categoryId);
-                if (obj != null)
+                foreach (var obj in importedObjects)
                 {
-                    importedObjects.Add(obj);
-                    objectsImported++;
-                    onCounts?.Invoke(objectsImported, attachmentsImported);
+                    ImportAttachment(obj.Id, file);
                 }
-            }
-
-            // Attach other files to all imported 3D objects
-            if (importedObjects.Count > 0 && otherFiles.Count > 0)
-            {
-                foreach (var file in otherFiles)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    onProgress?.Invoke(Path.GetFileName(file));
-                    foreach (var obj in importedObjects)
-                    {
-                        ImportAttachment(obj.Id, file);
-                    }
-                    attachmentsImported++;
-                    onCounts?.Invoke(objectsImported, attachmentsImported);
-                }
+                counts.Attachments++;
+                onCounts?.Invoke(counts.ToResult());
             }
         }
 
@@ -157,7 +178,7 @@ public partial class LibraryManager
         foreach (var subDir in Directory.GetDirectories(folderPath))
         {
             ImportFolderRecursive(subDir, categoryId ?? parentCategoryId, onProgress, onCounts,
-                ref objectsImported, ref attachmentsImported, ref firstCreatedCategoryId, cancellationToken);
+                counts, cancellationToken);
         }
     }
 

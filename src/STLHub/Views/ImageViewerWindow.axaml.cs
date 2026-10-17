@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 
 namespace STLHub.Views;
@@ -18,9 +20,26 @@ public partial class ImageViewerWindow : Window
     {
         Title = title;
 
-        if (File.Exists(imagePath))
+        try
         {
-            ViewerImage.Source = new Bitmap(imagePath);
+            if (File.Exists(imagePath))
+                ViewerImage.Source = new Bitmap(imagePath);
         }
+        catch (Exception)
+        {
+            // An unreadable or truncated image leaves the viewer empty rather than crashing it.
+        }
+    }
+
+    /// <summary>Esc closes the viewer.</summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyDown(e);
     }
 }

@@ -25,8 +25,59 @@
         <StreamGeometry x:Key="GridSmallIcon">M0 0h4v4H0zM6 0h4v4H6zM12 0h4v4H12zM0 6h4v4H0zM6 6h4v4H6zM12 6h4v4H12zM0 12h4v4H0zM6 12h4v4H6zM12 12h4v4H12z</StreamGeometry>
         <StreamGeometry x:Key="GridMediumIcon">M0 0h7v7H0zM9 0h7v7H9zM0 9h7v7H0zM9 9h7v7H9z</StreamGeometry>
         <StreamGeometry x:Key="GridLargeIcon">M0 0h16v16H0z</StreamGeometry>
-        <StreamGeometry x:Key="SunIcon">M12 3V1m0 18v2M5.6 5.6L4.2 4.2m13.4 13.4l1.4 1.4M3 12H1m18 0h2M5.6 18.4l-1.4 1.4M18.4 5.6l1.4-1.4M16 12a4 4 0 11-8 0 4 4 0 018 0z</StreamGeometry>
-        <StreamGeometry x:Key="MoonIcon">M12 3a6 6 0 009 9 9 9 0 01-9-9z</StreamGeometry>
+        <StreamGeometry x:Key="SearchIcon">M7 1a6 6 0 014.75 9.67l3.79 3.8-1.06 1.06-3.8-3.79A6 6 0 117 1zm0 1.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z</StreamGeometry>
+        <StreamGeometry x:Key="TagIcon">M1 1h6.6L15 8.4 8.4 15 1 7.6V1zm3.25 2a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5z</StreamGeometry>
+        <!-- Stroked, not filled: use with Path Stroke=..., never with PathIcon. -->
+        <StreamGeometry x:Key="CloseGlyph">M3,3 L9,9 M3,9 L9,3</StreamGeometry>
+
+        <!-- Template for full-width sidebar rows that are real, focusable buttons. Colors and
+             states live in the "row" button variant in App.axaml. -->
+        <ControlTheme x:Key="SidebarRowButton" TargetType="Button">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="2">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          Padding="{TemplateBinding Padding}"
+                                          Margin="-2"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <!-- Icon toggle for the view-size group: the checked option gets a fill, so state
+             never rests on opacity alone, and screen readers see a radio group. -->
+        <ControlTheme x:Key="ViewSizeToggle" TargetType="RadioButton">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            BorderBrush="Transparent" BorderThickness="2">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
+            </Style>
+            <Style Selector="^:checked">
+                <Setter Property="Background" Value="{DynamicResource ToolbarBtnHoverBg}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#PART_Root">
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+            </Style>
+        </ControlTheme>
     </Window.Resources>
 
     <Design.DataContext>
@@ -42,13 +93,13 @@
 
                 <!-- Repository -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button Command="{Binding OpenRepositoryCommand}"
-                            Height="32" Padding="12,0" FontSize="12"
-                            Background="{DynamicResource AccentColor}" Foreground="{DynamicResource TextOnAccent}"
-                            CornerRadius="6" ToolTip.Tip="Abrir ou criar repositório">
+                    <Button Classes="primary" Command="{Binding OpenRepositoryCommand}"
+                            FontSize="12"
+                            ToolTip.Tip="Abrir ou criar repositório">
                         <StackPanel Orientation="Horizontal" Spacing="6">
+                            <!-- PathIcon does not inherit the label color; take the button's. -->
                             <PathIcon Data="{StaticResource FolderOpenIcon}" Width="14" Height="14"
-                                      Foreground="{DynamicResource TextOnAccent}"/>
+                                      Foreground="{Binding $parent[Button].Foreground}"/>
                             <TextBlock Text="Abrir" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -64,16 +115,19 @@
                         <TextBox x:Name="SearchBox"
                                  Text="{Binding SearchText, Mode=TwoWay}"
                                  PlaceholderText="Buscar objetos..."
+                                 AutomationProperties.Name="Buscar objetos"
+                                 KeyDown="SearchBox_KeyDown"
                                  CornerRadius="16" Padding="14,7,38,7"
                                  FontSize="13"
                                  VerticalAlignment="Center"
                                  HorizontalAlignment="Stretch"/>
-                        <Button Command="{Binding ClearSearchCommand}"
-                                Width="28" Height="28"
+                        <Button Classes="ghost" Command="{Binding ClearSearchCommand}"
+                                IsVisible="{Binding HasSearchText}"
+                                Width="28" Height="28" CornerRadius="14"
                                 HorizontalAlignment="Right" VerticalAlignment="Center"
                                 Margin="0,0,6,0"
-                                Background="Transparent" BorderBrush="Transparent"
-                                ToolTip.Tip="Limpar busca">
+                                AutomationProperties.Name="Limpar busca"
+                                ToolTip.Tip="Limpar busca (Esc)">
                             <Viewbox Stretch="Uniform" Width="14" Height="14">
                                 <Canvas Width="24" Height="24">
                                     <Path Data="M6,6 L18,18 M6,18 L18,6"
@@ -98,46 +152,25 @@
 
                     <Border Width="1" Height="18" Background="{DynamicResource SeparatorColor}" Margin="6,0"/>
 
-                    <!-- View Size Buttons -->
-                    <Button Command="{Binding SetViewSizeCommand}" CommandParameter="Small"
-                            Height="32" Width="32" Padding="0"
-                            Background="Transparent" CornerRadius="6"
-                            Opacity="{Binding SmallViewOpacity}"
-                            ToolTip.Tip="Pequeno">
-                        <Button.Styles>
-                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
-                            </Style>
-                        </Button.Styles>
-                        <PathIcon Data="{StaticResource GridSmallIcon}" Width="14" Height="14"
-                                  Foreground="{DynamicResource TextPrimary}"/>
-                    </Button>
-                    <Button Command="{Binding SetViewSizeCommand}" CommandParameter="Medium"
-                            Height="32" Width="32" Padding="0"
-                            Background="Transparent" CornerRadius="6"
-                            Opacity="{Binding MediumViewOpacity}"
-                            ToolTip.Tip="Médio">
-                        <Button.Styles>
-                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
-                            </Style>
-                        </Button.Styles>
-                        <PathIcon Data="{StaticResource GridMediumIcon}" Width="14" Height="14"
-                                  Foreground="{DynamicResource TextPrimary}"/>
-                    </Button>
-                    <Button Command="{Binding SetViewSizeCommand}" CommandParameter="Large"
-                            Height="32" Width="32" Padding="0"
-                            Background="Transparent" CornerRadius="6"
-                            Opacity="{Binding LargeViewOpacity}"
-                            ToolTip.Tip="Grande">
-                        <Button.Styles>
-                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
-                            </Style>
-                        </Button.Styles>
-                        <PathIcon Data="{StaticResource GridLargeIcon}" Width="14" Height="14"
-                                  Foreground="{DynamicResource TextPrimary}"/>
-                    </Button>
+                    <!-- View Size Toggles -->
+                    <RadioButton Theme="{StaticResource ViewSizeToggle}" GroupName="ViewSize"
+                                 IsChecked="{Binding IsSmallView}"
+                                 AutomationProperties.Name="Ícones pequenos"
+                                 ToolTip.Tip="Ícones pequenos">
+                        <PathIcon Data="{StaticResource GridSmallIcon}" Width="14" Height="14"/>
+                    </RadioButton>
+                    <RadioButton Theme="{StaticResource ViewSizeToggle}" GroupName="ViewSize"
+                                 IsChecked="{Binding IsMediumView}"
+                                 AutomationProperties.Name="Ícones médios"
+                                 ToolTip.Tip="Ícones médios">
+                        <PathIcon Data="{StaticResource GridMediumIcon}" Width="14" Height="14"/>
+                    </RadioButton>
+                    <RadioButton Theme="{StaticResource ViewSizeToggle}" GroupName="ViewSize"
+                                 IsChecked="{Binding IsLargeView}"
+                                 AutomationProperties.Name="Ícones grandes"
+                                 ToolTip.Tip="Ícones grandes">
+                        <PathIcon Data="{StaticResource GridLargeIcon}" Width="14" Height="14"/>
+                    </RadioButton>
 
                     <Border Width="1" Height="18" Background="{DynamicResource SeparatorColor}" Margin="6,0"/>
 
@@ -165,18 +198,12 @@
                     <Border Width="1" Height="18" Background="{DynamicResource SeparatorColor}" Margin="6,0"/>
 
                     <!-- About -->
-                    <Button Click="About_Click"
-                            Height="32" Width="32" Padding="0"
-                            Background="Transparent" CornerRadius="6"
+                    <Button Classes="ghost" Click="About_Click"
+                            Height="32" Width="32"
+                            AutomationProperties.Name="Sobre o STLHub"
                             ToolTip.Tip="Sobre o STLHub">
-                        <Button.Styles>
-                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                <Setter Property="Background" Value="{DynamicResource ToolbarBtnBg}"/>
-                            </Style>
-                        </Button.Styles>
                         <PathIcon Data="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5zM6.75 7.5h2.5v5h-2.5v-5z"
-                                  Width="14" Height="14"
-                                  Foreground="{DynamicResource TextPrimary}"/>
+                                  Width="14" Height="14"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -186,25 +213,19 @@
         <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource SidebarBg}"
                 MinWidth="180" MaxWidth="500">
             <Grid RowDefinitions="Auto, Auto, *">
-                <!-- "All Objects" -->
-                <Border Grid.Row="0" Cursor="Hand" PointerPressed="AllObjects_PointerPressed"
-                        Padding="14,10" Name="AllObjectsBorder"
-                        Background="Transparent"
+                <!-- "All Objects": clears both filters; also the drop target for moving a
+                     category back to the root. -->
+                <Button Grid.Row="0" Theme="{StaticResource SidebarRowButton}" Classes="row"
+                        Command="{Binding ShowAllObjectsCommand}"
+                        Classes.active="{Binding IsAllObjectsSelected}"
                         DragDrop.AllowDrop="True"
                         DragDrop.DragOver="RootCategory_DragOver"
                         DragDrop.Drop="RootCategory_Drop">
-                    <Border.Styles>
-                        <Style Selector="Border:pointerover">
-                            <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
-                        </Style>
-                    </Border.Styles>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="📦" FontSize="14" VerticalAlignment="Center"/>
-                        <TextBlock Text="Todos os Objetos" FontSize="13" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextPrimary}"
-                                   Name="AllObjectsLabel"/>
+                        <TextBlock Text="Todos os Objetos" FontSize="13" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Border>
+                </Button>
 
                 <!-- Tags Section -->
                 <Border Grid.Row="1" IsVisible="{Binding AllTags.Count}">
@@ -217,8 +238,18 @@
                                  SelectedItem="{Binding SelectedTag}"
                                  Background="Transparent" BorderThickness="0"
                                  MaxHeight="200"
+                                 AutomationProperties.Name="Tags"
+                                 KeyDown="TagList_KeyDown"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.Styles>
+                                <!-- The delete button appears only for the row in hand, so the
+                                     sidebar is not a column of red marks. -->
+                                <Style Selector="ListBoxItem Button.reveal">
+                                    <Setter Property="Opacity" Value="0"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover Button.reveal, ListBoxItem:selected Button.reveal, ListBoxItem:focus-within Button.reveal">
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Style>
                                 <Style Selector="ListBoxItem">
                                     <Setter Property="Padding" Value="0"/>
                                     <Setter Property="Margin" Value="0"/>
@@ -236,19 +267,28 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="14,6" Background="Transparent">
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Excluir tag…"
+                                                          Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteTagGlobalCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
                                         <Grid ColumnDefinitions="Auto, *, Auto">
                                             <TextBlock Grid.Column="0" Text="🏷" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                        Foreground="{DynamicResource TextPrimary}"/>
-                                            <Button Grid.Column="2"
+                                            <Button Grid.Column="2" Classes="ghost reveal"
                                                     Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteTagGlobalCommand}"
                                                     CommandParameter="{Binding}"
-                                                    Background="Transparent" Padding="2" Margin="0"
-                                                    Width="18" Height="18" CornerRadius="9"
-                                                    ToolTip.Tip="Remover tag">
-                                                <TextBlock Text="✕" FontSize="9" Foreground="{DynamicResource DangerColor}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    Width="20" Height="20" CornerRadius="10"
+                                                    AutomationProperties.Name="{Binding Name, StringFormat='Excluir a tag {0}'}"
+                                                    ToolTip.Tip="Excluir tag de todos os objetos">
+                                                <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                                      Stroke="{DynamicResource DangerColor}" StrokeThickness="1.5"
+                                                      StrokeLineCap="Round"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </Grid>
                                     </Border>
@@ -264,21 +304,21 @@
                         <TextBlock Text="CATEGORIAS" FontWeight="Bold" FontSize="11"
                                    Foreground="{DynamicResource TextSecondary}" LetterSpacing="1.5"/>
                     </Border>
-                    <Border DockPanel.Dock="Top" Padding="14,8" Background="Transparent" Cursor="Hand" PointerPressed="AddRootCategory_PointerPressed">
-                        <Border.Styles>
-                            <Style Selector="Border:pointerover">
-                                <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
-                            </Style>
-                        </Border.Styles>
+                    <Button DockPanel.Dock="Top" Theme="{StaticResource SidebarRowButton}" Classes="row"
+                            Padding="14,8"
+                            Foreground="{DynamicResource TextSecondary}"
+                            Command="{Binding AddRootCategoryCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="+" FontSize="16" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Nova Categoria" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
+                            <TextBlock Text="+" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="Nova Categoria" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
-                    </Border>
+                    </Button>
 
                     <TreeView Name="CategoryTree"
                               ItemsSource="{Binding Categories}"
                               SelectedItem="{Binding SelectedCategory}"
+                              AutomationProperties.Name="Categorias"
+                              KeyDown="CategoryTree_KeyDown"
                               Background="{DynamicResource SidebarBg}"
                               BorderThickness="0"
                               Padding="0"
@@ -424,10 +464,10 @@
                                                           Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).AddSubCategoryCommand}"
                                                           CommandParameter="{Binding}"/>
                                                 <Separator/>
-                                                <MenuItem Header="✏ Renomear"
+                                                <MenuItem Header="✏ Renomear" InputGesture="F2"
                                                           Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RenameCategoryCommand}"
                                                           CommandParameter="{Binding}"/>
-                                                <MenuItem Header="🗑 Excluir"
+                                                <MenuItem Header="🗑 Excluir…" InputGesture="Delete"
                                                           Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteCategoryCommand}"
                                                           CommandParameter="{Binding}"/>
                                             </ContextMenu>
@@ -446,42 +486,141 @@
 
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
         <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource ContentBg}">
-            <Panel>
-                <!-- Watermark -->
+            <Grid RowDefinitions="Auto, *">
+                <!-- Active filters: category and tag combine; each chip removes its own filter. -->
+                <WrapPanel Grid.Row="0" Margin="20,14,20,0"
+                           IsVisible="{Binding HasActiveFilters}">
+                    <WrapPanel.Styles>
+                        <Style Selector="Border.filter-chip">
+                            <Setter Property="Background" Value="{DynamicResource TagBg}"/>
+                            <Setter Property="CornerRadius" Value="12"/>
+                            <Setter Property="Padding" Value="10,4,4,4"/>
+                            <Setter Property="Margin" Value="0,0,6,0"/>
+                        </Style>
+                        <Style Selector="Button.chip-remove">
+                            <Setter Property="Width" Value="20"/>
+                            <Setter Property="Height" Value="20"/>
+                            <Setter Property="CornerRadius" Value="10"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </WrapPanel.Styles>
+                    <Border Classes="filter-chip" IsVisible="{Binding ActiveCategoryLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource FolderOpenIcon}" Width="12" Height="12"
+                                      Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Text="{Binding ActiveCategoryLabel}" FontSize="12" VerticalAlignment="Center"
+                                       MaxWidth="360" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource TextPrimary}"/>
+                            <Button Classes="ghost chip-remove" Command="{Binding ClearCategoryFilterCommand}"
+                                    AutomationProperties.Name="Remover filtro de categoria"
+                                    ToolTip.Tip="Remover filtro de categoria">
+                                <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.5"
+                                      StrokeLineCap="Round"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="filter-chip" IsVisible="{Binding ActiveTagLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource TagIcon}" Width="12" Height="12"
+                                      Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Text="{Binding ActiveTagLabel}" FontSize="12" VerticalAlignment="Center"
+                                       MaxWidth="240" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource TextPrimary}"/>
+                            <Button Classes="ghost chip-remove" Command="{Binding ClearTagFilterCommand}"
+                                    AutomationProperties.Name="Remover filtro de tag"
+                                    ToolTip.Tip="Remover filtro de tag">
+                                <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.5"
+                                      StrokeLineCap="Round"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+
+            <Panel Grid.Row="1">
+                <!-- Watermark: decoration behind the cards, removed when a message takes the centre. -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Opacity="0.08" IsHitTestVisible="False" Spacing="0">
+                            Opacity="0.08" IsHitTestVisible="False" Spacing="0"
+                            IsVisible="{Binding !IsEmptyStateVisible}">
                     <Image Source="/Assets/watermark.png" Width="220" Height="220"
                            RenderOptions.BitmapInterpolationMode="HighQuality"/>
                 </StackPanel>
-                <!-- Empty state -->
+
+                <!-- Empty library -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             IsVisible="{Binding IsLibraryEmpty}"
                             IsHitTestVisible="False"
+                            MaxWidth="320"
                             Spacing="12">
                     <PathIcon Data="{StaticResource FolderOpenIcon}"
                               Width="40" Height="40"
-                              Foreground="{DynamicResource TextMuted}"
-                              HorizontalAlignment="Center"
-                              Opacity="0.4"/>
+                              Foreground="{DynamicResource TextSecondary}"
+                              HorizontalAlignment="Center"/>
                     <TextBlock Text="Biblioteca vazia"
                                FontSize="16" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondary}"
-                               HorizontalAlignment="Center"
-                               Opacity="0.6"/>
+                               Foreground="{DynamicResource TextPrimary}"
+                               HorizontalAlignment="Center"/>
                     <TextBlock Text="Arraste uma pasta aqui ou use Abrir para criar uma biblioteca"
                                FontSize="12"
-                               Foreground="{DynamicResource TextMuted}"
+                               Foreground="{DynamicResource TextSecondary}"
                                HorizontalAlignment="Center"
-                               Opacity="0.6"
-                               MaxWidth="280"
                                TextAlignment="Center"
                                TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <!-- Object Cards -->
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <!-- Nothing matches the search and/or filters; the library itself is not empty. -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{Binding IsNoResults}"
+                            MaxWidth="380"
+                            Spacing="12">
+                    <PathIcon Data="{StaticResource SearchIcon}"
+                              Width="32" Height="32"
+                              Foreground="{DynamicResource TextSecondary}"
+                              HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding NoResultsTitle}"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding NoResultsMessage}"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextSecondary}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <Button Content="Limpar busca"
+                                Command="{Binding ClearSearchCommand}"
+                                IsVisible="{Binding HasSearchText}"/>
+                        <Button Content="Mostrar todos os objetos"
+                                Command="{Binding ShowAllObjectsCommand}"
+                                IsVisible="{Binding HasActiveFilters}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Slow query: shown only after a short delay, so quick searches never flicker. -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{Binding IsLoadingPlaceholder}"
+                            IsHitTestVisible="False"
+                            Width="200" Spacing="12">
+                    <TextBlock Text="Carregando objetos..."
+                               FontSize="13" Foreground="{DynamicResource TextSecondary}"
+                               HorizontalAlignment="Center"/>
+                    <ProgressBar IsIndeterminate="True" Height="3"
+                                 Foreground="{DynamicResource AccentColor}"/>
+                </StackPanel>
+
+                <!-- Object Cards (hidden behind a placeholder so its transparent surface
+                     cannot swallow clicks meant for the placeholder's buttons) -->
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              IsVisible="{Binding !IsEmptyStateVisible}">
                 <Border Padding="16">
-                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedObject}"
+                <ListBox x:Name="ObjectList"
+                         ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedObject}"
+                         AutomationProperties.Name="Objetos"
+                         KeyDown="ObjectList_KeyDown"
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -531,7 +670,7 @@
                                                   Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RegenerateThumbnailCommand}"
                                                   CommandParameter="{Binding}"/>
                                         <Separator/>
-                                        <MenuItem Header="🗑 Excluir Objeto"
+                                        <MenuItem Header="🗑 Excluir Objeto…" InputGesture="Delete"
                                                   Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteObjectCommand}"
                                                   CommandParameter="{Binding}"/>
                                     </ContextMenu>
@@ -570,6 +709,7 @@
                                                 FontWeight="SemiBold"
                                                 Foreground="{DynamicResource TextPrimary}"
                                                 TextTrimming="CharacterEllipsis"
+                                                ToolTip.Tip="{Binding Name}"
                                                 FontSize="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardFontSize}"
                                                 Text="{Binding Name}"/>
                                         </StackPanel>
@@ -582,6 +722,7 @@
                 </Border>
             </ScrollViewer>
             </Panel>
+            </Grid>
         </Border>
 
         <!-- ═══════════ DETAILS PANEL ═══════════ -->
@@ -626,11 +767,27 @@
 
                         <TextBlock Text="Nome" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,6,0,-8"/>
-                        <TextBox Text="{Binding EditedName, Mode=TwoWay}" CornerRadius="6"/>
+                        <StackPanel Spacing="4">
+                            <TextBox Text="{Binding EditedName, Mode=TwoWay}" CornerRadius="6"
+                                     MaxLength="200"
+                                     AutomationProperties.Name="Nome"
+                                     Classes.invalid="{Binding IsNameInvalid}">
+                                <TextBox.Styles>
+                                    <Style Selector="TextBox.invalid /template/ Border#PART_BorderElement">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource DangerColor}"/>
+                                    </Style>
+                                </TextBox.Styles>
+                            </TextBox>
+                            <TextBlock Text="O nome não pode ficar vazio; o nome anterior será mantido."
+                                       IsVisible="{Binding IsNameInvalid}"
+                                       FontSize="11" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
 
                         <TextBlock Text="Descrição" Foreground="{DynamicResource TextSecondary}" FontSize="11"
                                    FontWeight="SemiBold" Margin="0,2,0,-8"/>
                         <TextBox Text="{Binding EditedDescription, Mode=TwoWay}"
+                                 AutomationProperties.Name="Descrição"
                                  AcceptsReturn="True" Height="80" TextWrapping="Wrap" CornerRadius="6"/>
 
                         <ContentControl Content="{Binding SelectedObject}">
@@ -661,12 +818,16 @@
                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
                                                        Foreground="{DynamicResource TextPrimary}"/>
-                                            <Button Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RemoveTagCommand}"
+                                            <Button Classes="ghost"
+                                                    Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RemoveTagCommand}"
                                                     CommandParameter="{Binding}"
-                                                    Background="Transparent" Padding="2" Margin="0"
-                                                    Width="16" Height="16" CornerRadius="8">
-                                                <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource DangerColor}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    Width="18" Height="18" CornerRadius="9"
+                                                    AutomationProperties.Name="{Binding Name, StringFormat='Remover a tag {0} deste objeto'}"
+                                                    ToolTip.Tip="Remover deste objeto">
+                                                <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.5"
+                                                      StrokeLineCap="Round"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </StackPanel>
                                     </Border>
@@ -675,11 +836,13 @@
                         </ItemsControl>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBox Text="{Binding NewTagName, Mode=TwoWay}" PlaceholderText="Nova tag..."
+                                     MaxLength="50"
+                                     AutomationProperties.Name="Nova tag"
                                      Width="130" FontSize="12" CornerRadius="6" KeyDown="NewTagTextBox_KeyDown"/>
                             <Button Content="+" Command="{Binding AddTagCommand}"
-                                    Background="{DynamicResource AccentColor}" Foreground="{DynamicResource TextOnAccent}"
-                                    Width="32" Height="32" CornerRadius="6" FontSize="16" Padding="0"
-                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                    AutomationProperties.Name="Adicionar tag"
+                                    ToolTip.Tip="Adicionar tag (Enter)"
+                                    Width="32" Height="32" FontSize="16" Padding="0"/>
                         </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource SeparatorColor}" Margin="0,6"/>
@@ -688,7 +851,16 @@
                                    Foreground="{DynamicResource TextPrimary}"/>
                         <ListBox ItemsSource="{Binding Attachments}" Background="Transparent"
                                  BorderThickness="0" MaxHeight="150"
+                                 AutomationProperties.Name="Arquivos associados"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem Button.reveal">
+                                    <Setter Property="Opacity" Value="0"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover Button.reveal, ListBoxItem:selected Button.reveal, ListBoxItem:focus-within Button.reveal">
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Style>
+                            </ListBox.Styles>
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel />
@@ -718,22 +890,26 @@
                                                        Foreground="{DynamicResource BadgeText}"
                                                        ToolTip.Tip="{Binding FilePath}"/>
                                         </Border>
-                                        <Button Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RemoveAttachmentCommand}"
+                                        <Button Classes="overlay reveal"
+                                                Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RemoveAttachmentCommand}"
                                                 CommandParameter="{Binding}"
                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"
-                                                Background="{DynamicResource DangerColor}"
-                                                Foreground="White" Width="20" Height="20" Padding="0"
-                                                FontSize="10" CornerRadius="10">
-                                            <TextBlock Text="✕" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                Width="22" Height="22"
+                                                CornerRadius="11"
+                                                AutomationProperties.Name="{Binding Type, StringFormat='Remover anexo {0}'}"
+                                                ToolTip.Tip="Remover anexo">
+                                            <!-- Stroke follows the button's foreground, so it flips with the hover fill. -->
+                                            <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                                  Stroke="{Binding $parent[ContentPresenter].Foreground}" StrokeThickness="1.5"
+                                                  StrokeLineCap="Round"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <Button Content="Anexar Arquivo..." Click="AttachFile_Click"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                Background="{DynamicResource ToolbarBtnBg}" Foreground="{DynamicResource TextPrimary}"
-                                CornerRadius="6" Padding="10,8"/>
+                                HorizontalAlignment="Stretch"/>
 
                         <!-- Read-only project info extracted from the selected .3mf file -->
                         <StackPanel IsVisible="{Binding IsProjectInfo3mfVisible}" Spacing="6" Margin="0,8,0,0">
@@ -775,11 +951,8 @@
                                             <StackPanel IsVisible="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).HasRichDescription3mf}">
                                                 <TextBlock Text="Descrição" FontSize="10" Foreground="{DynamicResource TextSecondary}"/>
                                                 <Button Content="Ver descrição do projeto" Click="ViewDescription_Click"
-                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                                        Margin="0,4,0,0" FontSize="12"
-                                                        Background="{DynamicResource ToolbarBtnBg}"
-                                                        Foreground="{DynamicResource TextPrimary}"
-                                                        CornerRadius="6" Padding="10,7"/>
+                                                        HorizontalAlignment="Stretch"
+                                                        Margin="0,4,0,0" FontSize="12"/>
                                             </StackPanel>
 
                                             <StackPanel IsVisible="{Binding CreationDate, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -826,11 +999,12 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <Button Grid.Row="2" Content="Salvar Alterações" Command="{Binding SaveMetadataCommand}"
-                        IsEnabled="{Binding HasUnsavedChanges}"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        Background="{DynamicResource AccentColor}" Foreground="{DynamicResource TextOnAccent}"
-                        Padding="12" FontWeight="Bold" FontSize="14" CornerRadius="8"/>
+                <!-- 10px right margin matches the scroll area's padding, so the button ends where
+                     the fields above it end. -->
+                <Button Grid.Row="2" Classes="primary" Content="Salvar Alterações" Command="{Binding SaveMetadataCommand}"
+                        ToolTip.Tip="As alterações também são salvas ao selecionar outro objeto"
+                        HorizontalAlignment="Stretch" Margin="0,0,10,0"
+                        MinHeight="36" FontSize="14"/>
             </Grid>
         </Border>
 
@@ -853,7 +1027,7 @@
                 <!-- Progress indicator -->
                 <ProgressBar Grid.Column="0" IsIndeterminate="True" Width="80" Height="3"
                              Margin="0,0,10,0" VerticalAlignment="Center"
-                             IsVisible="{Binding IsBusy}"
+                             IsVisible="{Binding IsActivityVisible}"
                              Foreground="{DynamicResource AccentColor}"/>
                 <!-- Status / Hint text -->
                 <TextBlock Grid.Column="1" Name="StatusBarText"
@@ -862,14 +1036,9 @@
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <!-- Item count -->
                 <TextBlock Grid.Column="2" FontSize="11"
-                           Foreground="{DynamicResource TextMuted}"
-                           VerticalAlignment="Center">
-                    <TextBlock.Text>
-                        <MultiBinding StringFormat="{}{0} objeto(s)">
-                            <Binding Path="Items.Count"/>
-                        </MultiBinding>
-                    </TextBlock.Text>
-                </TextBlock>
+                           Text="{Binding ItemCountText}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>
