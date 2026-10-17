@@ -17,16 +17,14 @@
     </Application.DataTemplates>
 
     <Application.Styles>
-        <!-- Fluent's own accent (checkbox, focused fields, list selection) follows each theme's
-             AccentColor instead of the operating system's blue. -->
+        <!-- Fluent's own accent (checkbox, focused fields, list selection) follows the theme's
+             AccentColor instead of the operating system's blue. Fluent only accepts Dark and
+             Light palettes; App.ApplyTheme re-points the matching one when a skin (Nord,
+             Dracula, Solarized) is selected. -->
         <FluentTheme>
             <FluentTheme.Palettes>
                 <ColorPaletteResources x:Key="Dark" Accent="#E8922A"/>
                 <ColorPaletteResources x:Key="Light" Accent="#C07320"/>
-                <ColorPaletteResources x:Key="{x:Static local:AppThemes.Nord}" Accent="#5477A2"/>
-                <ColorPaletteResources x:Key="{x:Static local:AppThemes.Dracula}" Accent="#BD93F9"/>
-                <ColorPaletteResources x:Key="{x:Static local:AppThemes.SolarizedDark}" Accent="#3295DA"/>
-                <ColorPaletteResources x:Key="{x:Static local:AppThemes.SolarizedLight}" Accent="#3295DA"/>
             </FluentTheme.Palettes>
         </FluentTheme>
 
