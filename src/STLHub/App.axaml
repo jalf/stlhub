@@ -221,6 +221,7 @@
             <StreamGeometry x:Key="IconFolderPlus">M1 3.5A1.5 1.5 0 012.5 2h3.6l1.6 1.6h5.8A1.5 1.5 0 0115 5.1v7.4a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5z M7.25 6.25h1.5V8h1.75v1.5H8.75v1.75h-1.5V9.5H5.5V8h1.75z</StreamGeometry>
             <StreamGeometry x:Key="IconPencil">M11.5 1l3.5 3.5L5.5 14H2v-3.5z M9.65 3.55l2.8 2.8-.7.7-2.8-2.8z</StreamGeometry>
             <StreamGeometry x:Key="IconTrash">M5.5 1h5v1.5H14V4H2V2.5h3.5z M3 5h10l-.8 10H3.8z M6 7v6h1.2V7z M8.8 7v6H10V7z</StreamGeometry>
+            <StreamGeometry x:Key="IconCheck">M6.3 13.2L1.6 8.5l1.8-1.8 2.9 2.9 6.3-6.3 1.8 1.8z</StreamGeometry>
             <StreamGeometry x:Key="IconRefresh">M13.2 5A6 6 0 1 1 9.04 2.09L8.76 3.67A4.4 4.4 0 1 0 11.81 5.8z M9.22 1.11L12.06 3.32 8.63 4.45z</StreamGeometry>
             <StreamGeometry x:Key="IconWarning">M8 1l7.5 13.5H.5z M7.2 5.5h1.6v4.7H7.2z M7.2 11.3h1.6v1.6H7.2z</StreamGeometry>
             <StreamGeometry x:Key="IconFile">M3 1h6v4h4v10H3z M10 1l3 3h-3z</StreamGeometry>

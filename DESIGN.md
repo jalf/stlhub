@@ -185,6 +185,8 @@ STLHub is styled after the printer. Its single accent is amber, like PLA glowing
 
 The chrome stays warm and quiet so the user's models are the most colorful thing on screen. Amber marks only what the user can act on next or what is currently selected: the open-library button, the save action, the selection ring and the busy indicator. Everything else is built from tonal steps of one warm neutral family, so the interface reads as a single material rather than a collection of panels. Controls are tactile and friendly: softly rounded, warmly filled, with one confident amber action per region.
 
+Motion behaves like a print coming off the bed. Things rise into place and settle on a cubic ease-out; nothing bounces, glows or loops. Motion explains feedback and change, and it has exactly one authored moment: a freshly made thumbnail printing itself in, layer by layer.
+
 The identity rejects three things. It is not a cold-grey IDE with a Microsoft-blue accent, not a corporate dashboard of identical metric cards and accent gradients, and not a neon gamer skin whose personality competes with the models.
 
 **Key Characteristics:**
@@ -194,13 +196,14 @@ The identity rejects three things. It is not a cold-grey IDE with a Microsoft-bl
 - Fixed-size model cards in a wrapping gallery, at three user-chosen sizes.
 - Inter throughout, in a compact 10–18 px working range. Larger sizes are reserved for the About dialog.
 - Dark is the default theme. Light is its full counterpart.
+- Feedback-sized motion (120–180ms) with one authored moment, the print-in reveal; all spatial movement yields to the OS reduce-motion setting.
 
 ## Colors
 
 A warm, low-chroma brown-to-cream neutral family carries the whole interface. One saturated amber is the only voice. Values in the frontmatter without a suffix are the default Dark theme; `-light` keys are the Light theme counterpart of the same role. Every role exists as a `DynamicResource` key in `App.axaml` (for example `accent` → `AccentColor`, `hover-bg` → `SidebarHoverBg`).
 
 ### Primary
-- **Workshop Amber** (`accent`; `accent-light` on light): the one action color. Used for the toolbar **Abrir** button, **Salvar Alterações**, the 2px selection ring around the selected model card, the rename field's border, the indeterminate progress bar and the GitHub link in About. On Light it deepens to a burnt amber so it still holds as a fill.
+- **Workshop Amber** (`accent`; `accent-light` on light): the one action color. Used for the toolbar **Abrir** button, **Salvar Alterações**, the 2px selection ring around the selected model card, the rename field's border, and the indeterminate progress bar. On Light it deepens to a burnt amber so it still holds as a fill.
 - **Hot Amber** (`accent-hover`, `accent-hover-light`): the hover state of amber fills. It is *lighter* than the base in both canonical themes, so the near-black `text-on-accent` gains contrast on hover instead of losing it (Light: 5.6:1).
 
 ### Neutral
@@ -269,7 +272,7 @@ A fixed four-region desktop shell (design size 1100×700):
 - **Details** (300px fixed, `toolbar-bg`, 20px padding, 1px left seam). A scrolling stack with 14px spacing, with the Save button pinned at the bottom. When nothing is selected it shows only the watermark at 8%.
 - **Status bar** (26px, `toolbar-bg`, 12×4px padding): progress, status text, object count.
 
-Spacing works in a loose 2px-based rhythm: 2 / 4 / 6 / 8 / 12 / 14 / 16 / 20 / 24px. Sidebar rows use 14px horizontal padding everywhere so labels share one left edge. Dialogs use 24px margins and right-aligned footer buttons with 10px spacing.
+Spacing works in a loose 2px-based rhythm: 2 / 4 / 6 / 8 / 12 / 14 / 16 / 20 / 24px. Sidebar rows use 14px horizontal padding everywhere so labels share one left edge. Dialogs sit on the bench-top surface (`toolbar-bg`, never Fluent's default window grey), with titles in `text-primary`, supporting text in `text-secondary`, 24px margins and right-aligned footer buttons with 10px spacing.
 
 **The One Left Edge Rule.** Everything in the sidebar starts 14px in: section headers, rows, the "Nova Categoria" affordance. New sidebar content aligns to it.
 
@@ -279,6 +282,7 @@ Hybrid: **chrome is flat and tonal, models are lifted.** Panels separate through
 
 ### Shadow Vocabulary
 - **Model Rest** (`box-shadow: 0 2px 12px 0 rgba(0,0,0,0.16)`; Avalonia `0 2 12 0 #28000000`): model cards in the gallery.
+- **Model Lift** (`box-shadow: 0 6px 18px 0 rgba(0,0,0,0.22)`; Avalonia `0 6 18 0 #38000000`): the card under the pointer, which also rises 2px.
 - **Preview Rest** (`box-shadow: 0 2px 10px 0 rgba(0,0,0,0.16)`; Avalonia `0 2 10 0 #28000000`): the details-panel thumbnail.
 
 ### Named Rules
@@ -300,7 +304,7 @@ One system, defined once in `App.axaml` (`Application.Styles`). A button never s
 - **Secondary (no class):** `toolbar-btn-bg` fill, `text-primary` label; hover `toolbar-btn-hover-bg`; disabled `text-muted`. "Fechar", "Cancelar", "Anexar Arquivo...", "Limpar busca", the add-tag **+**.
 - **Primary (`primary`; not `accent`, which Fluent reserves for its system-blue style):** `accent` fill, `text-on-accent` semibold label; hover `accent-hover`; disabled falls back to the secondary fill with `text-muted`. One per region: "Abrir", "Salvar Alterações", "OK" in warnings, the confirm button of non-destructive confirmations.
 - **Danger (`danger`):** `danger` fill, `text-on-danger` semibold label; hover `danger-hover`. Only the confirm button of destructive dialogs, which also makes Cancel the default.
-- **Ghost (`ghost`):** transparent, no padding, `toolbar-btn-bg` on hover. Icon-only buttons: ⓘ, clear search, chip and tag ✕, the GitHub link.
+- **Ghost (`ghost`):** transparent, no padding, `toolbar-btn-bg` on hover. Icon-only buttons: ⓘ, clear search, chip and tag ✕. The About dialog's GitHub link is a ghost button too, labelled in `text-primary` and underlined, so it reads as a link in every theme (amber text fails AA on Light).
 - **Overlay (`overlay`):** `badge-bg` scrim with `badge-text`, turning `danger` on hover. Buttons laid over a thumbnail (attachment remove).
 - **Row (`row`, with the `SidebarRowButton` template):** full-width sidebar entries; transparent, `hover-bg` on hover, `active-bg` + semibold when `.active`.
 - **Focus:** keyboard focus colors the button's own 2px border, so the ring follows the corner radius and never shifts layout (`FocusAdorner` is off; Fluent's white square is gone). `accent` on secondary and ghost buttons; `text-primary` on filled primary / danger buttons, where an amber or red ring would vanish into the fill. The fill runs under the transparent border (`BackgroundSizing=OuterBorderEdge`), so a 32px button shows 32px of fill. Sidebar rows draw the same inset 2px `accent` border.
@@ -317,7 +321,7 @@ One system, defined once in `App.axaml` (`Application.Styles`). A button never s
 - **File-type badge:** `badge-bg` scrim with `badge-text` 10–11px bold extension (".3mf", ".stl"), docked bottom-right of the thumbnail.
 
 ### Cards / Containers
-- **Model card (signature):** `card-bg`, 12px radius, Model Rest shadow, fixed size per view mode. The top is a `card-thumbnail-bg` well with the thumbnail at uniform-to-fill and the file-type badge. The bottom has 10px side padding: the category badge, then the model name (600, single line, ellipsis). Selection draws a 2px `accent` ring inset 4px with 12px radius. Right-click opens Refazer Thumbnail / Excluir Objeto.
+- **Model card (signature):** `card-bg`, 12px radius, Model Rest shadow (Model Lift and a 2px rise on hover), fixed size per view mode. The top is a `card-thumbnail-bg` well with the thumbnail at uniform-to-fill and the file-type badge. The bottom has 10px side padding: the category badge, then the model name (600, single line, ellipsis). Selection draws a 2px `accent` ring inset 4px with 12px radius. Right-click opens Refazer Thumbnail / Excluir Objeto.
 - **Attachment tile:** 90×100, 8px radius, `card-thumbnail-bg` with the file-type glyph and extension (or the image itself), a filename strip on `badge-bg` at the bottom, and a 20px `danger` circle remove at top-right.
 
 ### Inputs / Fields
@@ -342,6 +346,22 @@ The gallery has three distinct placeholders; never reuse one for another's situa
 Vector `PathIcon`s are the system: solid 16×16 shapes with even-odd cut-outs for detail, rendered at 12–14px (24px in attachment tiles), colored by the surrounding text brush (`text-secondary` beside labels). They live as `StreamGeometry` resources in `App.axaml` (`IconModel`, `IconTag`, `IconFolder`, `IconFolderOpen`, `IconFolderPlus`, `IconPencil`, `IconTrash`, `IconRefresh`, `IconWarning`, and the file types `IconFile`, `IconDocument`, `IconImage`, `IconArchive`, `IconVideo`, `IconAudio`, `IconCode`, `IconPrinter`). `FileTypeIconConverter` maps an attachment extension to one of them. Context menus carry their icon in `MenuItem.Icon`, never as an emoji prefix in the label. The only emoji left in the UI is the ❤ in the About footer, which is copy, not an icon.
 
 **The One Icon Set Rule.** New UI uses the vector geometry in `App.axaml`, never emoji. A new icon joins the same family: solid fill, 16×16 bounds, similar ink weight.
+
+### About dialog
+The one place the Display size appears. The bench-top (`toolbar-bg`) window holds, centered: the emblem only (`Assets/logo-mark.png`, cropped from the full logo, whose navy "STL" wordmark disappears on dark themes and repeats the name below), the name in Display with the version as a small `tag-bg` tag on the same line, the tagline in `text-secondary`, one line of purpose in `text-primary`, the supported formats as file-type tags (`card-thumbnail-bg`, 11px bold `text-secondary`, 6px radius) and the repository link. A footer band behind a 1px seam carries the license line on the left and **Fechar** on the right, following the dialog-footer convention. The window sizes to its content.
+
+### Motion and feedback
+Quick and physical: state changes acknowledge themselves in 120–180ms on a cubic ease-out, and one moment, the print-in reveal, is allowed to take its time.
+
+- **Print-in reveal (the authored moment):** a thumbnail that was just made (import, or Refazer miniatura) is uncovered bottom-up over 650ms (80ms delay) by `PrintReveal` (`src/STLHub/Controls/`), with a 2px amber nozzle line riding the edge and fading out over the last stretch. It plays once per object (`Object3D.IsFreshPrint`), never on scroll, search or re-sort. The About dialog's emblem prints in the same way each time the dialog opens; the cover is removed after 1.5s even if the animation clock stalls.
+- **Feedback (120–180ms):** the card lifts 2px with Model Lift on hover; the selection ring fades in from 97% scale; filter chips and a just-added tag chip pop from 92%; the details panel fades up from 35% opacity when the selection changes; "Salvar Alterações" turns into "✓ Salvo" for 1.4s after a save.
+- **Drag feedback:** files over the window turn the gallery into an opaque drop zone (2px dashed amber outline, title naming the action, one line naming where the files land). An internal drag lights the target category row (or "Todos os Objetos") with `hover-bg` and the 2px amber inset border.
+- **Exit:** a deleted card fades and shrinks to 95% in 150ms (ease-in) before the list reloads. Exits are faster than entrances.
+- **Reduced motion:** `MotionPreference` reads the OS setting (Windows animation effects, macOS Reduce motion, GNOME enable-animations) and puts `reduce-motion` on the window. Every spatial style is gated on `:is(Window):not(.reduce-motion)`; with it, the reveal is skipped and lifts, scales and rises are dropped, while fades and state colors stay.
+
+**The One Moment Rule.** The print-in reveal is the only animation longer than 200ms. New motion is feedback-sized, or it replaces the reveal as the authored moment rather than joining it.
+
+**The Gate Rule.** Any new transform, translate or scale animation goes under `:is(Window):not(.reduce-motion)`. Opacity and color may stay ungated.
 
 ## Do's and Don'ts
 

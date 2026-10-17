@@ -37,11 +37,14 @@ The app follows a layered MVVM architecture:
 **Services** (`src/STLHub/Services/`) — business logic decoupled from UI:
 - `LibraryManager` — recursive folder import, hash-based duplicate detection, file copy to library path, orchestrates thumbnail generation
 - `ThumbnailGenerator` — extracts embedded previews from `.3mf` ZIPs, renders `.stl`, falls back to a generated placeholder
+- `MotionPreference` — reads the OS "reduce motion" accessibility setting; the main window gates spatial animation on it
 - `UserSettings` — JSON-persisted settings in `%APPDATA%/STLHub/settings.json` (window state, theme, view preferences, recent repos)
 
 **ViewModels** (`src/STLHub/ViewModels/`) — `MainWindowViewModel` (~941 lines) is the central orchestrator: search, sort, filter state, `CategoryNode` tree, and all commands. `ViewModelBase` is the abstract MVVM base.
 
 **Views** (`src/STLHub/Views/`) — Avalonia XAML. `MainWindow.axaml` is the primary shell with grid/list modes, search bar, and category tree panel. Dialogs: `AboutDialog`, `ConfirmationDialog`, `WarningDialog`, `ImportProgressDialog`, `ImageViewerWindow`.
+
+**Controls** (`src/STLHub/Controls/`) — `PrintReveal`, the bottom-up reveal drawn over a freshly made thumbnail.
 
 **Converters** (`src/STLHub/Converters/`) — `CategoryIdToNameConverter`, `FileTypeIconConverter`, `LocalImagePathConverter`.
 

@@ -4,6 +4,7 @@
         xmlns:models="using:STLHub.Models"
         xmlns:conv="using:STLHub.Converters"
         xmlns:aconv="using:Avalonia.Controls.Converters"
+        xmlns:ctl="using:STLHub.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
@@ -79,6 +80,152 @@
             </Style>
         </ControlTheme>
     </Window.Resources>
+
+    <!-- ═══════════ MOTION ═══════════
+         Things arrive the way a print does: they rise into place and settle, never bounce.
+         Feedback runs 120–180ms with a cubic ease-out; the print-in reveal of a freshly made
+         thumbnail (650ms) is the one authored moment. Spatial movement is gated on the window
+         not carrying "reduce-motion" (set from the OS accessibility preference); fades and
+         state colors stay either way. -->
+    <Window.Styles>
+        <!-- Gallery card: a light lift and a deeper shadow under the pointer. -->
+        <Style Selector="Border.model-card">
+            <Setter Property="BoxShadow" Value="0 2 12 0 #28000000"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover Border.model-card">
+            <Setter Property="BoxShadow" Value="0 6 18 0 #38000000"/>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) ListBoxItem /template/ Panel#PART_Lift">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) ListBoxItem:pointerover /template/ Panel#PART_Lift">
+            <Setter Property="RenderTransform" Value="translateY(-2px)"/>
+        </Style>
+
+        <!-- Selection ring settles onto the card instead of blinking on. -->
+        <Style Selector=":is(Window):not(.reduce-motion) ListBoxItem /template/ Border#SelectionRing">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) ListBoxItem:selected /template/ Border#SelectionRing, :is(Window):not(.reduce-motion) ListBoxItem:focus-visible /template/ Border#SelectionRing">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+
+        <!-- Print-in reveal: a just-made thumbnail is uncovered bottom-up behind a nozzle line. -->
+        <Style Selector="ctl|PrintReveal">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) ctl|PrintReveal.fresh">
+            <Setter Property="IsVisible" Value="True"/>
+            <Style.Animations>
+                <Animation Duration="0:0:0.65" Delay="0:0:0.08" Easing="CubicEaseOut" FillMode="Both">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Progress" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Progress" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- Chips that just appeared (active filters, a tag just added) pop into place. -->
+        <Style Selector=":is(Window):not(.reduce-motion) Border.filter-chip.shown, :is(Window):not(.reduce-motion) Border.tag-chip.fresh">
+            <Style.Animations>
+                <Animation Duration="0:0:0.14" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                        <Setter Property="ScaleTransform.ScaleX" Value="0.92"/>
+                        <Setter Property="ScaleTransform.ScaleY" Value="0.92"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                        <Setter Property="ScaleTransform.ScaleX" Value="1"/>
+                        <Setter Property="ScaleTransform.ScaleY" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector=":is(Window).reduce-motion Border.filter-chip.shown, :is(Window).reduce-motion Border.tag-chip.fresh">
+            <Style.Animations>
+                <Animation Duration="0:0:0.14" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- File drag over the window: the gallery says what the drop will do. -->
+        <Style Selector="Panel.file-drop">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.file-drop.active">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) Panel.file-drop StackPanel.file-drop-message">
+            <Setter Property="RenderTransform" Value="translateY(8px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) Panel.file-drop.active StackPanel.file-drop-message">
+            <Setter Property="RenderTransform" Value="translateY(0px)"/>
+        </Style>
+
+        <!-- Internal drag: the category (or "Todos os Objetos") that will take the drop. -->
+        <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot, Button.row.drop-target /template/ Border#PART_Root">
+            <Setter Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+        </Style>
+
+        <!-- "Salvar Alterações" confirms the save in place for a moment. The button is disabled
+             right after a save (nothing left to save), so the confirmation keeps readable ink. -->
+        <Style Selector="Button.primary.saved:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style Selector="Button.saved PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style Selector=":is(Window):not(.reduce-motion) Button.saved StackPanel.saved-label">
+            <Style.Animations>
+                <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                        <Setter Property="TranslateTransform.Y" Value="4"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                        <Setter Property="TranslateTransform.Y" Value="0"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </Window.Styles>
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -220,6 +367,7 @@
                         Classes.active="{Binding IsAllObjectsSelected}"
                         DragDrop.AllowDrop="True"
                         DragDrop.DragOver="RootCategory_DragOver"
+                        DragDrop.DragLeave="DropTarget_DragLeave"
                         DragDrop.Drop="RootCategory_Drop">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{StaticResource IconModel}" Width="14" Height="14"
@@ -443,6 +591,7 @@
                                           DragDrop.AllowDrop="True"
                                           DragDrop.Drop="Category_Drop"
                                           DragDrop.DragOver="Category_DragOver"
+                                          DragDrop.DragLeave="DropTarget_DragLeave"
                                           PointerPressed="Category_PointerPressed"
                                           PointerMoved="Category_PointerMoved">
                                         <!-- Display Mode -->
@@ -523,7 +672,8 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                         </Style>
                     </WrapPanel.Styles>
-                    <Border Classes="filter-chip" IsVisible="{Binding ActiveCategoryLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Border Classes="filter-chip" IsVisible="{Binding ActiveCategoryLabel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Classes.shown="{Binding ActiveCategoryLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <PathIcon Data="{StaticResource FolderOpenIcon}" Width="12" Height="12"
                                       Foreground="{DynamicResource TextSecondary}"/>
@@ -539,7 +689,8 @@
                             </Button>
                         </StackPanel>
                     </Border>
-                    <Border Classes="filter-chip" IsVisible="{Binding ActiveTagLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Border Classes="filter-chip" IsVisible="{Binding ActiveTagLabel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Classes.shown="{Binding ActiveTagLabel, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <PathIcon Data="{StaticResource TagIcon}" Width="12" Height="12"
                                       Foreground="{DynamicResource TextSecondary}"/>
@@ -654,37 +805,48 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Template">
                                 <ControlTemplate>
-                                    <Panel>
-                                        <ContentPresenter Name="PART_ContentPresenter"
-                                                          Content="{TemplateBinding Content}"
-                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                                        <Border Name="SelectionRing"
-                                                CornerRadius="12"
-                                                BorderThickness="0"
-                                                BorderBrush="{DynamicResource AccentColor}"
-                                                IsHitTestVisible="False"
-                                                Margin="4"/>
+                                    <!-- The outer panel never moves, so lifting the card under the
+                                         pointer cannot push its edge out from under the pointer. -->
+                                    <Panel Background="Transparent">
+                                        <Panel Name="PART_Lift">
+                                            <ContentPresenter Name="PART_ContentPresenter"
+                                                              Content="{TemplateBinding Content}"
+                                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                            <Border Name="SelectionRing"
+                                                    CornerRadius="12"
+                                                    BorderThickness="2"
+                                                    BorderBrush="{DynamicResource AccentColor}"
+                                                    Opacity="0"
+                                                    IsHitTestVisible="False"
+                                                    Margin="4"/>
+                                        </Panel>
                                     </Panel>
                                 </ControlTemplate>
                             </Setter>
+                            <Style Selector="^ /template/ Border#SelectionRing">
+                                <Setter Property="Transitions">
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                                    </Transitions>
+                                </Setter>
+                            </Style>
                             <Style Selector="^:focus-visible /template/ Border#SelectionRing">
-                                <Setter Property="BorderThickness" Value="2"/>
+                                <Setter Property="Opacity" Value="1"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource TextSecondary}"/>
                             </Style>
                             <Style Selector="^:selected /template/ Border#SelectionRing">
-                                <Setter Property="BorderThickness" Value="2"/>
+                                <Setter Property="Opacity" Value="1"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
                             </Style>
                         </ControlTheme>
                     </ListBox.ItemContainerTheme>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{DynamicResource CardBg}" Margin="4" CornerRadius="12"
+                            <Border Classes="model-card" Background="{DynamicResource CardBg}" Margin="4" CornerRadius="12"
                                     Width="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardWidth}"
                                     Height="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).CardHeight}"
-                                    BoxShadow="0 2 12 0 #28000000"
                                     DoubleTapped="Object3D_DoubleTapped"
                                     PointerPressed="Object3D_PointerPressed"
                                     PointerMoved="Object3D_PointerMoved">
@@ -720,6 +882,9 @@
                                                 <TextBlock Text="{Binding FileType}" FontSize="10"
                                                            Foreground="{DynamicResource BadgeText}" FontWeight="Bold"/>
                                             </Border>
+                                            <ctl:PrintReveal Classes.fresh="{Binding IsFreshPrint}"
+                                                             CoverBrush="{DynamicResource CardThumbnailBg}"
+                                                             NozzleBrush="{DynamicResource AccentColor}"/>
                                         </Panel>
                                     </Border>
                                     <!-- Name -->
@@ -750,6 +915,32 @@
                 </Border>
             </ScrollViewer>
             </Panel>
+
+                <!-- File drag over the window: says what the drop will do and where it lands. -->
+                <Panel Grid.RowSpan="2" Classes="file-drop" Classes.active="{Binding IsFileDropActive}"
+                       IsHitTestVisible="False">
+                    <Border Background="{DynamicResource ContentBg}"/>
+                    <Rectangle Margin="12" RadiusX="12" RadiusY="12"
+                               Stroke="{DynamicResource AccentColor}" StrokeThickness="2"
+                               StrokeDashArray="3,2"/>
+                    <StackPanel Classes="file-drop-message"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                MaxWidth="360" Spacing="10">
+                        <PathIcon Data="{StaticResource IconFolderPlus}" Width="32" Height="32"
+                                  Foreground="{DynamicResource TextPrimary}"
+                                  HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding FileDropTitle}"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding FileDropHint}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Panel>
             </Grid>
         </Border>
 
@@ -765,7 +956,7 @@
                      so long single-line values (Name) are measured inside it. -->
                 <ScrollViewer Grid.Row="1" Margin="0,0,0,15"
                               HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="14" Margin="0,0,10,0">
+                    <StackPanel x:Name="DetailsContent" Spacing="14" Margin="0,0,10,0">
                         <!-- Thumbnail and path. Templated so these fields are not bound through a
                              null SelectedObject while the panel is hidden. -->
                         <ContentControl Content="{Binding SelectedObject}">
@@ -844,7 +1035,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource TagBg}" CornerRadius="12"
+                                    <Border Classes="tag-chip" Classes.fresh="{Binding IsJustAdded}"
+                                            Background="{DynamicResource TagBg}" CornerRadius="12"
                                             Padding="10,4" Margin="0,0,5,5">
                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
@@ -1043,10 +1235,22 @@
 
                 <!-- 10px right margin matches the scroll area's gutter, so the button ends where
                      the fields above it end. -->
-                <Button Grid.Row="2" Classes="primary" Content="Salvar Alterações" Command="{Binding SaveMetadataCommand}"
+                <Button Grid.Row="2" Classes="primary" Classes.saved="{Binding JustSaved}"
+                        Command="{Binding SaveMetadataCommand}"
+                        AutomationProperties.Name="Salvar Alterações"
                         ToolTip.Tip="As alterações também são salvas ao selecionar outro objeto"
                         HorizontalAlignment="Stretch" Margin="0,0,10,0"
-                        MinHeight="36" FontSize="14"/>
+                        MinHeight="36" FontSize="14">
+                    <Panel>
+                        <TextBlock Text="Salvar Alterações" HorizontalAlignment="Center"
+                                   IsVisible="{Binding !JustSaved}"/>
+                        <StackPanel Classes="saved-label" Orientation="Horizontal" Spacing="6"
+                                    HorizontalAlignment="Center" IsVisible="{Binding JustSaved}">
+                            <PathIcon Data="{StaticResource IconCheck}" Width="14" Height="14"/>
+                            <TextBlock Text="Salvo" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Panel>
+                </Button>
             </Grid>
         </Border>
 

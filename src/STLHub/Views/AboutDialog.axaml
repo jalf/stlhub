@@ -1,66 +1,106 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="using:STLHub.Controls"
         x:Class="STLHub.Views.AboutDialog"
         Title="Sobre o STLHub"
-        Width="420" Height="460"
+        Width="420" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        Background="{DynamicResource DetailsBg}">
 
-    <Grid RowDefinitions="*, Auto" Margin="24">
-        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+    <Window.Styles>
+        <!-- Supported formats, in the file-type badge's voice. -->
+        <Style Selector="Border.format">
+            <Setter Property="Background" Value="{DynamicResource CardThumbnailBg}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+        <Style Selector="Border.format > TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        </Style>
 
-            <!-- Logo -->
-            <Image Source="/Assets/logo.png" Width="140" Height="100"
-                   Stretch="Uniform" Margin="0,0,0,12"/>
+        <!-- The repository link reads as a link in every theme: Ink text, underlined, with the
+             ghost hover fill. Amber text would fail contrast on the light themes. -->
+        <Style Selector="Button.link TextBlock">
+            <Setter Property="TextDecorations" Value="Underline"/>
+        </Style>
+    </Window.Styles>
 
-            <!-- App Name -->
-            <TextBlock Text="STLHub" FontSize="28" FontWeight="Bold"
-                       HorizontalAlignment="Center"/>
+    <Grid RowDefinitions="Auto, Auto">
+        <StackPanel Grid.Row="0" Margin="32,32,32,24" HorizontalAlignment="Center">
 
-            <!-- Tagline -->
+            <!-- Emblem only: the full logo repeats the name below and its navy wordmark
+                 disappears on dark themes. -->
+            <Panel Width="128" Height="96" HorizontalAlignment="Center">
+                <Image Source="/Assets/logo-mark.png" Stretch="Uniform"
+                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                <!-- Starts covered; the code-behind prints the emblem in once the window is
+                     open (the same reveal a fresh thumbnail gets) and then removes it. -->
+                <ctl:PrintReveal x:Name="EmblemReveal" Progress="0"
+                                 CoverBrush="{DynamicResource DetailsBg}"
+                                 NozzleBrush="{DynamicResource AccentColor}"/>
+            </Panel>
+
+            <!-- Name and version share a line; the version is a quiet tag, not a heading. -->
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
+                        Margin="0,20,0,0">
+                <TextBlock Text="STLHub" FontSize="28" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimary}"
+                           VerticalAlignment="Center"/>
+                <Border Background="{DynamicResource TagBg}" CornerRadius="8" Padding="8,2"
+                        VerticalAlignment="Center" Margin="0,4,0,0">
+                    <TextBlock x:Name="VersionText" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}"/>
+                </Border>
+            </StackPanel>
+
             <TextBlock Text="Catálogo de objetos 3D" FontSize="13"
-                       Foreground="{DynamicResource TextSecondary}"
-                       HorizontalAlignment="Center" Margin="0,2,0,0"/>
-
-            <!-- Version -->
-            <TextBlock x:Name="VersionText" FontSize="12"
                        Foreground="{DynamicResource TextSecondary}"
                        HorizontalAlignment="Center" Margin="0,4,0,0"/>
 
-            <!-- Separator -->
-            <Border Height="1" Background="{DynamicResource SeparatorColor}"
-                    Margin="40,16" Opacity="0.5"/>
+            <TextBlock Text="Organize, catalogue e encontre seus modelos 3D com facilidade."
+                       FontSize="13" LineHeight="20" TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{DynamicResource TextPrimary}"
+                       MaxWidth="300" HorizontalAlignment="Center" Margin="0,20,0,0"/>
 
-            <!-- Description -->
-            <TextBlock Text="Organize, catalogue e encontre seus modelos 3D com facilidade. Suporte a arquivos STL, 3MF, OBJ e STEP."
-                       FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
-                       Foreground="{DynamicResource TextSecondary}" MaxWidth="320" LineHeight="20"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                        Margin="0,12,0,0"
+                        AutomationProperties.Name="Formatos suportados: STL, 3MF, OBJ e STEP">
+                <Border Classes="format"><TextBlock Text=".stl"/></Border>
+                <Border Classes="format"><TextBlock Text=".3mf"/></Border>
+                <Border Classes="format"><TextBlock Text=".obj"/></Border>
+                <Border Classes="format"><TextBlock Text=".step"/></Border>
+            </StackPanel>
 
-            <!-- GitHub Link -->
-            <Button x:Name="GitHubLink" Classes="ghost" Click="GitHubLink_Click"
-                    HorizontalAlignment="Center" Margin="0,16,0,0"
-                    Padding="8,6">
+            <Button x:Name="GitHubLink" Classes="ghost link" Click="GitHubLink_Click"
+                    HorizontalAlignment="Center" Margin="0,20,0,0" Padding="10,6"
+                    AutomationProperties.Name="Abrir o repositório no GitHub"
+                    ToolTip.Tip="https://github.com/jalf/stlhub">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <PathIcon Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
                               Width="16" Height="16" Foreground="{DynamicResource TextPrimary}"/>
                     <TextBlock Text="github.com/jalf/stlhub" FontSize="13"
-                               Foreground="{DynamicResource AccentColor}"/>
+                               Foreground="{DynamicResource TextPrimary}"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-
-            <!-- Footer -->
-            <TextBlock Text="MIT License · Made with ❤ for makers"
-                       FontSize="11" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center"
-                       Margin="0,12,0,0"/>
         </StackPanel>
 
-        <!-- Close button -->
-        <Button Grid.Row="1" Content="Fechar"
-                IsDefault="True" IsCancel="True"
-                MinWidth="100"
-                HorizontalAlignment="Center"
-                Click="Close_Click"/>
+        <!-- Footer: license on the left, the dialog's one action on the right. -->
+        <Border Grid.Row="1" BorderBrush="{DynamicResource SeparatorColor}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0" Text="MIT License · Made with ❤ for makers"
+                           FontSize="11" Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <Button Grid.Column="1" Content="Fechar"
+                        IsDefault="True" IsCancel="True"
+                        MinWidth="88"
+                        Click="Close_Click"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

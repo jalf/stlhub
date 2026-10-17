@@ -42,6 +42,12 @@ public class Object3D : ObservableObject
     /// <summary>Category name resolved for display; not stored in the database.</summary>
     public string? CategoryName { get; set; }
 
+    /// <summary>
+    /// True for one display after the object's thumbnail was created (import or regeneration),
+    /// so its card can play the print-in reveal once; not stored in the database.
+    /// </summary>
+    public bool IsFreshPrint { get; set; }
+
     /// <summary>The object's name; also what assistive technology announces for its list item.</summary>
     public override string ToString() => Name;
 }
