@@ -149,6 +149,13 @@
             <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextOnDanger}"/>
         </Style>
+        <!-- Stroked glyphs inside an overlay button follow its state. -->
+        <Style Selector="Button.overlay Path.glyph">
+            <Setter Property="Stroke" Value="{DynamicResource BadgeText}"/>
+        </Style>
+        <Style Selector="Button.overlay:pointerover Path.glyph">
+            <Setter Property="Stroke" Value="{DynamicResource TextOnDanger}"/>
+        </Style>
 
         <!-- ═══════════ FOCUS FOR OTHER CONTROLS ═══════════
              Fluent's white focus square is replaced everywhere by a border the control already
@@ -163,8 +170,13 @@
         </Style>
         <Style Selector="ComboBox:focus-visible /template/ Border#Background">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
         <Style Selector="CheckBox:focus-visible /template/ Border#NormalRectangle">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+        <Style Selector="CheckBox:checked:focus-visible /template/ Border#NormalRectangle">
             <Setter Property="BorderBrush" Value="{DynamicResource TextPrimary}"/>
         </Style>
         <Style Selector="ListBoxItem">
@@ -209,7 +221,7 @@
             <StreamGeometry x:Key="IconFolderPlus">M1 3.5A1.5 1.5 0 012.5 2h3.6l1.6 1.6h5.8A1.5 1.5 0 0115 5.1v7.4a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5z M7.25 6.25h1.5V8h1.75v1.5H8.75v1.75h-1.5V9.5H5.5V8h1.75z</StreamGeometry>
             <StreamGeometry x:Key="IconPencil">M11.5 1l3.5 3.5L5.5 14H2v-3.5z M9.65 3.55l2.8 2.8-.7.7-2.8-2.8z</StreamGeometry>
             <StreamGeometry x:Key="IconTrash">M5.5 1h5v1.5H14V4H2V2.5h3.5z M3 5h10l-.8 10H3.8z M6 7v6h1.2V7z M8.8 7v6H10V7z</StreamGeometry>
-            <StreamGeometry x:Key="IconRefresh">M8 1.5a6.5 6.5 0 016.1 4.25L15.5 4.5V9h-4.5l1.65-1.65A4.75 4.75 0 103.4 9.4l-1.7.5A6.5 6.5 0 018 1.5z M2.6 11.2l1.6-.8A4.75 4.75 0 0012 11l1.3 1.1A6.5 6.5 0 012.6 11.2z</StreamGeometry>
+            <StreamGeometry x:Key="IconRefresh">M13.2 5A6 6 0 1 1 9.04 2.09L8.76 3.67A4.4 4.4 0 1 0 11.81 5.8z M9.22 1.11L12.06 3.32 8.63 4.45z</StreamGeometry>
             <StreamGeometry x:Key="IconWarning">M8 1l7.5 13.5H.5z M7.2 5.5h1.6v4.7H7.2z M7.2 11.3h1.6v1.6H7.2z</StreamGeometry>
             <StreamGeometry x:Key="IconFile">M3 1h6v4h4v10H3z M10 1l3 3h-3z</StreamGeometry>
             <StreamGeometry x:Key="IconDocument">M3 1h6v4h4v10H3z M10 1l3 3h-3z M5 7.5h6v1.2H5z M5 10h6v1.2H5z M5 12.5h4v1.2H5z</StreamGeometry>
@@ -261,6 +273,20 @@
             <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="{DynamicResource SidebarActiveBg}"/>
             <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="{DynamicResource SidebarActiveBg}"/>
             <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="{DynamicResource SidebarActiveBg}"/>
+
+            <SolidColorBrush x:Key="ToolTipBackground" Color="{DynamicResource ToolbarBg}"/>
+            <SolidColorBrush x:Key="ToolTipForeground" Color="{DynamicResource TextPrimary}"/>
+            <SolidColorBrush x:Key="ToolTipBorderBrush" Color="{DynamicResource SeparatorColor}"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{DynamicResource ToolbarBg}"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{DynamicResource SeparatorColor}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{DynamicResource SidebarHoverBg}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{DynamicResource SidebarActiveBg}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="{DynamicResource TextPrimary}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{DynamicResource TextPrimary}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{DynamicResource TextPrimary}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="{DynamicResource TextSecondary}"/>
+            <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="{DynamicResource TextSecondary}"/>
+            <SolidColorBrush x:Key="MenuFlyoutSeparatorBackground" Color="{DynamicResource SeparatorColor}"/>
 
             <!-- The checked CheckBox fills with the theme accent; its check mark takes the
                  accent's label color instead of Fluent's fixed white. -->

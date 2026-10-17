@@ -267,7 +267,7 @@
                             </ListBox.Styles>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="12,6" MinHeight="30" Background="Transparent">
+                                    <Border Padding="12,4" Background="Transparent">
                                         <Border.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Excluir tag…"
@@ -278,7 +278,7 @@
                                             </ContextMenu>
                                         </Border.ContextMenu>
                                         <Grid ColumnDefinitions="Auto, *, Auto">
-                                            <PathIcon Grid.Column="0" Data="{StaticResource IconTag}" Width="12" Height="12"
+                                            <PathIcon Grid.Column="0" Data="{StaticResource IconTag}" Width="14" Height="14"
                                                       Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -286,7 +286,7 @@
                                             <Button Grid.Column="2" Classes="ghost reveal"
                                                     Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).DeleteTagGlobalCommand}"
                                                     CommandParameter="{Binding}"
-                                                    Width="20" Height="20" CornerRadius="10"
+                                                    Width="18" Height="18" CornerRadius="9"
                                                     AutomationProperties.Name="{Binding Name, StringFormat='Excluir a tag {0}'}"
                                                     ToolTip.Tip="Excluir tag de todos os objetos">
                                                 <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
@@ -313,7 +313,8 @@
                             Foreground="{DynamicResource TextSecondary}"
                             Command="{Binding AddRootCategoryCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <PathIcon Data="{StaticResource IconFolderPlus}" Width="14" Height="14"/>
+                            <PathIcon Data="{StaticResource IconFolderPlus}" Width="14" Height="14"
+                                      Foreground="{DynamicResource TextSecondary}"/>
                             <TextBlock Text="Nova Categoria" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -499,7 +500,7 @@
         </Border>
 
         <!-- ═══════════ GRID SPLITTER ═══════════ -->
-        <GridSplitter Grid.Row="1" Grid.Column="1" Width="4" ResizeDirection="Columns"
+        <GridSplitter Grid.Row="1" Grid.Column="1" Width="4" ResizeDirection="Columns" Focusable="False"
                       Background="{DynamicResource SeparatorColor}" Cursor="SizeWestEast"/>
 
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
@@ -760,9 +761,11 @@
                 <TextBlock Grid.Row="0" Text="Detalhes" FontWeight="Bold" FontSize="18"
                            Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,15"/>
 
-                <ScrollViewer Grid.Row="1" Margin="0,0,0,15" Padding="0,0,10,0"
+                <!-- The 10px gutter for the scrollbar is a child margin, not ScrollViewer padding,
+                     so long single-line values (Name) are measured inside it. -->
+                <ScrollViewer Grid.Row="1" Margin="0,0,0,15"
                               HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="14">
+                    <StackPanel Spacing="14" Margin="0,0,10,0">
                         <!-- Thumbnail and path. Templated so these fields are not bound through a
                              null SelectedObject while the panel is hidden. -->
                         <ContentControl Content="{Binding SelectedObject}">
@@ -878,10 +881,18 @@
                         <TextBlock Text="Arquivos Associados" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimary}"/>
                         <ListBox ItemsSource="{Binding Attachments}" Background="Transparent"
-                                 BorderThickness="0" MaxHeight="150"
+                                 BorderThickness="0" MaxHeight="230"
                                  AutomationProperties.Name="Arquivos associados"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.Styles>
+                                <!-- Tiles are opened, not selected: no fill, just the focus ring. -->
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="CornerRadius" Value="10"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                </Style>
                                 <Style Selector="ListBoxItem Button.reveal">
                                     <Setter Property="Opacity" Value="0"/>
                                 </Style>
@@ -896,7 +907,8 @@
                             </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Width="90" Height="100" Margin="4" DoubleTapped="Attachment_DoubleTapped" Background="Transparent">
+                                    <Grid Width="72" Height="72" Margin="2" DoubleTapped="Attachment_DoubleTapped" Background="Transparent"
+                                          ToolTip.Tip="Clique duas vezes para abrir">
                                         <Panel>
                                             <Border Background="{DynamicResource CardThumbnailBg}" CornerRadius="8" ClipToBounds="True">
                                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
@@ -909,16 +921,18 @@
                                                 </StackPanel>
                                             </Border>
                                             <Border CornerRadius="8" ClipToBounds="True">
-                                                <Image Source="{Binding FilePath, Converter={StaticResource LocalImagePathConverter}}" Stretch="UniformToFill"/>
+                                                <Image x:Name="AttachmentImage"
+                                                       Source="{Binding FilePath, Converter={StaticResource LocalImagePathConverter}}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <!-- Images hide the centered type label, so they get a corner tag. -->
+                                            <Border Background="{DynamicResource BadgeBg}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    Padding="5,1" CornerRadius="6,0,8,0"
+                                                    IsVisible="{Binding #AttachmentImage.Source, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Text="{Binding Type}" FontSize="10" FontWeight="Bold"
+                                                           Foreground="{DynamicResource BadgeText}"/>
                                             </Border>
                                         </Panel>
-                                        <Border Background="{DynamicResource BadgeBg}" VerticalAlignment="Bottom"
-                                                Padding="5" CornerRadius="0,0,8,8">
-                                            <TextBlock Text="{Binding FilePath}" FontSize="9"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource BadgeText}"
-                                                       ToolTip.Tip="{Binding FilePath}"/>
-                                        </Border>
                                         <Button Classes="overlay reveal"
                                                 Command="{Binding #MainWindowRoot.((vm:MainWindowViewModel)DataContext).RemoveAttachmentCommand}"
                                                 CommandParameter="{Binding}"
@@ -927,9 +941,8 @@
                                                 CornerRadius="11"
                                                 AutomationProperties.Name="{Binding Type, StringFormat='Remover anexo {0}'}"
                                                 ToolTip.Tip="Remover anexo">
-                                            <!-- Stroke follows the button's foreground, so it flips with the hover fill. -->
-                                            <Path Data="{StaticResource CloseGlyph}" Width="12" Height="12"
-                                                  Stroke="{Binding $parent[ContentPresenter].Foreground}" StrokeThickness="1.5"
+                                            <Path Classes="glyph" Data="{StaticResource CloseGlyph}" Width="12" Height="12"
+                                                  StrokeThickness="1.5"
                                                   StrokeLineCap="Round"
                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
@@ -1028,7 +1041,7 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- 10px right margin matches the scroll area's padding, so the button ends where
+                <!-- 10px right margin matches the scroll area's gutter, so the button ends where
                      the fields above it end. -->
                 <Button Grid.Row="2" Classes="primary" Content="Salvar Alterações" Command="{Binding SaveMetadataCommand}"
                         ToolTip.Tip="As alterações também são salvas ao selecionar outro objeto"
