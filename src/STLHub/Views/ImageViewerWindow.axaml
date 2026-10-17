@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="STLHub.Views.ImageViewerWindow"
-        Title="Thumbnail"
+        Title="Miniatura"
         Width="600" Height="600"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource ContentBg}">

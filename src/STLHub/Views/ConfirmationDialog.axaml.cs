@@ -29,6 +29,7 @@ public partial class ConfirmationDialog : Window
         {
             CancelButton.IsDefault = true;
             ConfirmButton.Classes.Add("danger");
+            WarningIcon.Classes.Add("danger");
         }
         else
         {

@@ -8,13 +8,24 @@
         CanResize="False"
         ShowInTaskbar="False">
 
+    <Window.Styles>
+        <Style Selector="PathIcon#WarningIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
+        </Style>
+        <Style Selector="PathIcon#WarningIcon.danger">
+            <Setter Property="Foreground" Value="{DynamicResource DangerColor}"/>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="*, Auto" Margin="24">
         <StackPanel Grid.Row="0" Spacing="12" Margin="0,0,0,20">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="⚠" FontSize="28" Foreground="#FFC107" VerticalAlignment="Center"/>
+                <PathIcon x:Name="WarningIcon" Data="{StaticResource IconWarning}" Width="26" Height="26"
+                          VerticalAlignment="Center"/>
                 <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
             </StackPanel>
-            <TextBlock x:Name="MessageText" FontSize="13" Opacity="0.75" TextWrapping="Wrap"/>
+            <TextBlock x:Name="MessageText" FontSize="13" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondary}"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">

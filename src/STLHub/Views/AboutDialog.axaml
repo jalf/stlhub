@@ -20,11 +20,13 @@
                        HorizontalAlignment="Center"/>
 
             <!-- Tagline -->
-            <TextBlock Text="3D Object Catalog" FontSize="13" Opacity="0.5"
+            <TextBlock Text="Catálogo de objetos 3D" FontSize="13"
+                       Foreground="{DynamicResource TextSecondary}"
                        HorizontalAlignment="Center" Margin="0,2,0,0"/>
 
             <!-- Version -->
-            <TextBlock x:Name="VersionText" FontSize="12" Opacity="0.4"
+            <TextBlock x:Name="VersionText" FontSize="12"
+                       Foreground="{DynamicResource TextSecondary}"
                        HorizontalAlignment="Center" Margin="0,4,0,0"/>
 
             <!-- Separator -->
@@ -32,9 +34,9 @@
                     Margin="40,16" Opacity="0.5"/>
 
             <!-- Description -->
-            <TextBlock Text="Organize, catalogue e encontre seus modelos 3D com facilidade. Suporte a arquivos STL, 3MF e OBJ."
+            <TextBlock Text="Organize, catalogue e encontre seus modelos 3D com facilidade. Suporte a arquivos STL, 3MF, OBJ e STEP."
                        FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
-                       Opacity="0.7" MaxWidth="320" LineHeight="20"/>
+                       Foreground="{DynamicResource TextSecondary}" MaxWidth="320" LineHeight="20"/>
 
             <!-- GitHub Link -->
             <Button x:Name="GitHubLink" Classes="ghost" Click="GitHubLink_Click"
@@ -50,7 +52,7 @@
 
             <!-- Footer -->
             <TextBlock Text="MIT License · Made with ❤ for makers"
-                       FontSize="11" Opacity="0.3" HorizontalAlignment="Center"
+                       FontSize="11" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center"
                        Margin="0,12,0,0"/>
         </StackPanel>
 

@@ -232,7 +232,7 @@ Nord, Dracula, Solarized Dark and Solarized Light are **user-selectable skins**,
 ### Contrast status (warm themes)
 Measured against the surface each role actually sits on. PRODUCT.md commits to WCAG AA in every theme.
 - Passes: `text-primary` (15–17:1), `text-secondary` (6:1+), amber with `text-on-accent` (Dark 7.3:1, Light 4.8:1), Dark amber as text (7.6:1), tag text on `tag-bg` (10:1+).
-- **Fails AA, known gap:** `text-muted` at ~2.7:1 in both themes. It is currently used for real information ("Nova Categoria", the file path, the item count, the attachment type), so it needs either a darker/lighter value or a move to `text-secondary` for those uses.
+- **`text-muted` is not a text color for information.** At ~2.7:1 it is reserved for disabled labels (exempt from contrast), input borders at rest and decoration. Everything a user needs to read uses `text-secondary` or stronger.
 - **Fails AA for small text:** `accent-light` used as text on `content-bg-light` (3.5:1). It is fine as a fill under `text-on-accent-light`.
 - `danger` as small glyph text on Dark cards is 3.5:1, acceptable only for the ✕ icon (non-text UI, 3:1 minimum).
 
@@ -339,9 +339,9 @@ The gallery has three distinct placeholders; never reuse one for another's situa
 - **Watermark:** the STLHub mark at 8% opacity behind the gallery (220px) and in the empty details panel (140px). Hidden whenever a placeholder occupies the center.
 
 ### Iconography
-Vector `PathIcon`s (16×16 bounds, solid fills, rendered at 14px, colored by theme brush) are the system. Emoji currently used as icons (📦 📁 📂 🏷 🗑 ✏ 🔄 🧊 and file-type glyphs) are **debt**: they render differently on Windows, macOS and Linux and can't follow theme colors.
+Vector `PathIcon`s are the system: solid 16×16 shapes with even-odd cut-outs for detail, rendered at 12–14px (24px in attachment tiles), colored by the surrounding text brush (`text-secondary` beside labels). They live as `StreamGeometry` resources in `App.axaml` (`IconModel`, `IconTag`, `IconFolder`, `IconFolderOpen`, `IconFolderPlus`, `IconPencil`, `IconTrash`, `IconRefresh`, `IconWarning`, and the file types `IconFile`, `IconDocument`, `IconImage`, `IconArchive`, `IconVideo`, `IconAudio`, `IconCode`, `IconPrinter`). `FileTypeIconConverter` maps an attachment extension to one of them. Context menus carry their icon in `MenuItem.Icon`, never as an emoji prefix in the label. The only emoji left in the UI is the ❤ in the About footer, which is copy, not an icon.
 
-**The One Icon Set Rule.** New UI uses vector geometry defined as `StreamGeometry` resources, never emoji. When touching a surface that still has emoji icons, replace them.
+**The One Icon Set Rule.** New UI uses the vector geometry in `App.axaml`, never emoji. A new icon joins the same family: solid fill, 16×16 bounds, similar ink weight.
 
 ## Do's and Don'ts
 
@@ -360,7 +360,7 @@ Vector `PathIcon`s (16×16 bounds, solid fills, rendered at 14px, colored by the
 - **Don't** build dashboard furniture: no big-number metric tiles, no identical icon-heading-text card grids.
 - **Don't** add neon, glow shadows or saturated chrome that competes with the models.
 - **Don't** put shadows on toolbars, sidebars, panels, chips or buttons.
-- **Don't** use `text-muted` for information the user needs to read; it fails AA today.
+- **Don't** use `text-muted` for information the user needs to read; it is for disabled labels and resting borders only.
 - **Don't** hardcode hex values or `White` in views.
 - **Don't** add emoji as icons.
 - **Don't** take design cues from the Nord / Dracula / Solarized skins; they follow the warm system's roles, not the other way round.
