@@ -34,4 +34,40 @@ public partial class CategoryNode : ObservableObject
     {
         _category.Name = value;
     }
+
+    private string _nameBeforeEdit = string.Empty;
+
+    /// <summary>Enters inline rename mode, remembering the current name so it can be restored.</summary>
+    public void BeginEdit()
+    {
+        _nameBeforeEdit = Name;
+        IsEditing = true;
+    }
+
+    /// <summary>Leaves rename mode and restores the name the category had before editing.</summary>
+    public void CancelEdit()
+    {
+        Name = _nameBeforeEdit;
+        IsEditing = false;
+    }
+
+    /// <summary>
+    /// Leaves rename mode, trimming the new name. A blank name is rejected and the previous one
+    /// restored. Returns true when the name actually changed and needs saving.
+    /// </summary>
+    public bool EndEdit()
+    {
+        IsEditing = false;
+        var trimmed = Name.Trim();
+        if (trimmed.Length == 0)
+        {
+            Name = _nameBeforeEdit;
+            return false;
+        }
+        Name = trimmed;
+        return trimmed != _nameBeforeEdit;
+    }
+
+    /// <summary>The category's name; also what assistive technology announces for its tree item.</summary>
+    public override string ToString() => Name;
 }

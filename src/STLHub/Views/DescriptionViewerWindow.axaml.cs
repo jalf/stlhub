@@ -47,6 +47,18 @@ public partial class DescriptionViewerWindow : Window
         BuildContent(document);
     }
 
+    /// <summary>Esc closes the viewer.</summary>
+    protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyDown(e);
+    }
+
     private static HttpClient CreateHttpClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };

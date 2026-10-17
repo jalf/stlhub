@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using Avalonia.Themes.Fluent;
 using Avalonia.Styling;
 using STLHub.ViewModels;
 using STLHub.Views;
@@ -40,6 +42,26 @@ public partial class App : Application
     /// otherwise freeze the app before its window ever appears.
     /// </summary>
     private static readonly TimeSpan ExternalRepositoryOpenTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Switches the app to the theme <paramref name="themeKey"/> and points Fluent's accent
+    /// palette at that theme's <c>AccentColor</c>. Fluent keeps palettes only for its Dark and
+    /// Light bases, so a skin such as Nord updates the palette of the base it inherits from.
+    /// </summary>
+    private static void ApplyTheme(string themeKey)
+    {
+        var app = Current!;
+        var variant = AppThemes.GetVariant(themeKey);
+        app.RequestedThemeVariant = variant;
+
+        var baseVariant = variant.InheritVariant ?? variant;
+        if (app.Styles.OfType<FluentTheme>().FirstOrDefault() is { } fluent &&
+            fluent.Palettes.TryGetValue(baseVariant, out var palette) &&
+            app.TryGetResource("AccentColor", variant, out var value) && value is Color accent)
+        {
+            palette.Accent = accent;
+        }
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -82,7 +104,7 @@ public partial class App : Application
             var themeKey = settings.Theme ?? "Dark";
 
             // Apply saved theme
-            Application.Current!.RequestedThemeVariant = AppThemes.GetVariant(themeKey);
+            ApplyTheme(themeKey);
 
             var vm = new MainWindowViewModel(repository, libraryManager)
             {
@@ -96,10 +118,7 @@ public partial class App : Application
             var themeMatch = vm.ThemeOptions.FirstOrDefault(t => t.Key == themeKey) ?? vm.ThemeOptions[0];
             vm.SelectedThemeOption = themeMatch;
 
-            vm.ApplyTheme = (key) =>
-            {
-                Application.Current!.RequestedThemeVariant = AppThemes.GetVariant(key);
-            };
+            vm.ApplyTheme = ApplyTheme;
 
             vm.OnRepositoryChanged = (newRepoPath) =>
             {

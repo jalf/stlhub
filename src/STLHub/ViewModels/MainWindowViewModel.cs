@@ -37,6 +37,30 @@ public record SortOption(string Label, SortOrder Value);
 public record ThemeOption(string Label, string Key);
 
 /// <summary>
+/// A confirmation the view model asks the view to show.
+/// </summary>
+/// <param name="Title">Dialog heading.</param>
+/// <param name="Message">What will happen, in plain language.</param>
+/// <param name="ConfirmLabel">Label of the confirming button; names the action ("Excluir", "Anexar").</param>
+/// <param name="IsDestructive">Destructive confirmations use the danger color and never confirm on Enter.</param>
+public record ConfirmRequest(string Title, string Message, string ConfirmLabel, bool IsDestructive = true);
+
+/// <summary>
+/// Which placeholder the gallery shows when it has no cards.
+/// </summary>
+public enum GalleryEmptyState
+{
+    /// <summary>Cards are shown; no placeholder.</summary>
+    None,
+    /// <summary>A query is taking long enough to deserve an indicator.</summary>
+    Loading,
+    /// <summary>The library itself has no objects.</summary>
+    EmptyLibrary,
+    /// <summary>The library has objects, but the search and/or filters match none.</summary>
+    NoResults,
+}
+
+/// <summary>
 /// Main application view model. Manages the object library, categories, search,
 /// sorting, theme, and import operations.
 /// </summary>
@@ -46,12 +70,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private LibraryManager? _libraryManager;
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _projectInfoCts;
+    private Dictionary<int, CategoryNode> _categoryLookup = new();
 
     /// <summary>Callback set by the View to display warning dialogs.</summary>
     public Func<string, string, Task>? ShowWarningAsync { get; set; }
 
     /// <summary>Callback set by the View to display confirmation dialogs.</summary>
-    public Func<string, string, Task<bool>>? ShowConfirmAsync { get; set; }
+    public Func<ConfirmRequest, Task<bool>>? ShowConfirmAsync { get; set; }
 
     /// <summary>Callback set by the View to open a folder picker dialog.</summary>
     public Func<Task<string?>>? PickFolderAsync { get; set; }
@@ -62,12 +87,6 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Callback set by the View to focus and select the active category rename TextBox.</summary>
     public Action? FocusCategoryEditBox { get; set; }
 
-    /// <summary>Callback set by the View to show a loading dialog for slow queries.</summary>
-    public Action? ShowLoadingDialog { get; set; }
-
-    /// <summary>Callback set by the View to close the loading dialog.</summary>
-    public Action? CloseLoadingDialog { get; set; }
-
     [ObservableProperty]
     private string _searchText = string.Empty;
 
@@ -76,6 +95,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProjectInfo3mfVisible))]
+    [NotifyPropertyChangedFor(nameof(IsNameInvalid))]
     private Object3D? _selectedObject;
 
     /// <summary>Metadata extracted from the selected <c>.3mf</c> file; <c>null</c> for other file types.</summary>
@@ -122,13 +142,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _originalDescription = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNameInvalid))]
+    [NotifyCanExecuteChangedFor(nameof(SaveMetadataCommand))]
     private string _editedName = string.Empty;
 
     [ObservableProperty]
     private string _editedDescription = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveMetadataCommand))]
     private bool _hasUnsavedChanges;
+
+    /// <summary>True when the name field of the selected object has been cleared.</summary>
+    public bool IsNameInvalid => SelectedObject != null && string.IsNullOrWhiteSpace(EditedName);
 
     partial void OnEditedNameChanged(string value) =>
         HasUnsavedChanges = value != _originalName || EditedDescription != _originalDescription;
@@ -179,7 +205,24 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _statusText = "Pronto.";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActivityVisible))]
     private bool _isBusy;
+
+    /// <summary>True while the object list is being queried.</summary>
+    [ObservableProperty]
+    private bool _isLoadingItems;
+
+    /// <summary>True once a query has been running long enough to show a loading indicator.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActivityVisible))]
+    private bool _isSlowLoading;
+
+    /// <summary>Total number of objects in the library, regardless of search and filters.</summary>
+    [ObservableProperty]
+    private int _libraryObjectCount;
+
+    /// <summary>True when the status bar activity indicator should run.</summary>
+    public bool IsActivityVisible => IsBusy || IsSlowLoading;
 
     /// <summary>Callback to apply the theme at the application level.</summary>
     public Action<string>? ApplyTheme { get; set; }
@@ -204,14 +247,31 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CardHeight));
         OnPropertyChanged(nameof(ThumbnailHeight));
         OnPropertyChanged(nameof(CardFontSize));
-        OnPropertyChanged(nameof(SmallViewOpacity));
-        OnPropertyChanged(nameof(MediumViewOpacity));
-        OnPropertyChanged(nameof(LargeViewOpacity));
+        OnPropertyChanged(nameof(IsSmallView));
+        OnPropertyChanged(nameof(IsMediumView));
+        OnPropertyChanged(nameof(IsLargeView));
     }
 
-    public double SmallViewOpacity => CurrentViewSize == ViewSize.Small ? 1.0 : 0.35;
-    public double MediumViewOpacity => CurrentViewSize == ViewSize.Medium ? 1.0 : 0.35;
-    public double LargeViewOpacity => CurrentViewSize == ViewSize.Large ? 1.0 : 0.35;
+    /// <summary>Two-way state of the "small" view-size toggle.</summary>
+    public bool IsSmallView
+    {
+        get => CurrentViewSize == ViewSize.Small;
+        set { if (value) CurrentViewSize = ViewSize.Small; }
+    }
+
+    /// <summary>Two-way state of the "medium" view-size toggle.</summary>
+    public bool IsMediumView
+    {
+        get => CurrentViewSize == ViewSize.Medium;
+        set { if (value) CurrentViewSize = ViewSize.Medium; }
+    }
+
+    /// <summary>Two-way state of the "large" view-size toggle.</summary>
+    public bool IsLargeView
+    {
+        get => CurrentViewSize == ViewSize.Large;
+        set { if (value) CurrentViewSize = ViewSize.Large; }
+    }
 
     public int CardWidth => CurrentViewSize switch
     {
@@ -262,9 +322,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<Object3D> Items { get; } = new();
 
-    /// <summary>True when the current library has no imported models.</summary>
-    public bool IsLibraryEmpty => Items.Count == 0;
-
     public ObservableCollection<Attachment> Attachments { get; } = new();
     public ObservableCollection<Tag> ObjectTags { get; } = new();
     public ObservableCollection<CategoryNode> Categories { get; } = new();
@@ -285,7 +342,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _libraryManager = libraryManager;
         _selectedSortOption = SortOptions[0];
         _selectedThemeOption = ThemeOptions[0];
-        Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsLibraryEmpty));
+        Items.CollectionChanged += (_, _) => RaiseGalleryStateChanged();
         LoadCategories();
         LoadAllTags();
         LoadItems();
@@ -298,10 +355,137 @@ public partial class MainWindowViewModel : ViewModelBase
         _selectedThemeOption = ThemeOptions[0];
     }
 
+    // ── Gallery state: empty, no results, loading, active filters ────────────
+
+    /// <summary>Which placeholder the gallery shows, if any.</summary>
+    public GalleryEmptyState EmptyState =>
+        Items.Count > 0 ? GalleryEmptyState.None
+        : IsLoadingItems ? (IsSlowLoading ? GalleryEmptyState.Loading : GalleryEmptyState.None)
+        : LibraryObjectCount == 0 ? GalleryEmptyState.EmptyLibrary
+        : GalleryEmptyState.NoResults;
+
+    /// <summary>True when any gallery placeholder is visible.</summary>
+    public bool IsEmptyStateVisible => EmptyState != GalleryEmptyState.None;
+
+    /// <summary>True for the "library has no objects yet" placeholder.</summary>
+    public bool IsLibraryEmpty => EmptyState == GalleryEmptyState.EmptyLibrary;
+
+    /// <summary>True for the "nothing matches" placeholder.</summary>
+    public bool IsNoResults => EmptyState == GalleryEmptyState.NoResults;
+
+    /// <summary>True for the slow-query placeholder.</summary>
+    public bool IsLoadingPlaceholder => EmptyState == GalleryEmptyState.Loading;
+
+    /// <summary>True when a search term is active.</summary>
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+
+    /// <summary>True when a category or tag narrows the list.</summary>
+    public bool HasActiveFilters => SelectedCategory != null || SelectedTag != null;
+
+    /// <summary>Full path of the selected category, e.g. "Oficina › Suportes".</summary>
+    public string? ActiveCategoryLabel => SelectedCategory is { } node ? GetCategoryPath(node) : null;
+
+    /// <summary>Name of the selected tag filter.</summary>
+    public string? ActiveTagLabel => SelectedTag?.Name;
+
+    /// <summary>Heading of the "nothing matches" placeholder.</summary>
+    public string NoResultsTitle
+    {
+        get
+        {
+            if (HasSearchText) return $"Nenhum resultado para “{SearchText.Trim()}”";
+            return (SelectedCategory, SelectedTag) switch
+            {
+                ({ } c, { } t) => $"Nenhum objeto em “{c.Name}” com a tag “{t.Name}”",
+                ({ } c, null) => $"Nenhum objeto em “{c.Name}”",
+                (null, { } t) => $"Nenhum objeto com a tag “{t.Name}”",
+                _ => "Nenhum objeto",
+            };
+        }
+    }
+
+    /// <summary>Guidance under the "nothing matches" heading.</summary>
+    public string NoResultsMessage
+    {
+        get
+        {
+            if (HasSearchText && HasActiveFilters)
+                return "A busca considera só os filtros ativos. Tente buscar em todos os objetos.";
+            if (HasSearchText)
+                return "Confira a grafia ou tente outra palavra do nome ou da descrição.";
+            if (SelectedCategory is { Children.Count: > 0 } && !IncludeSubcategories && SelectedTag == null)
+                return "Os objetos podem estar nas subcategorias. Marque “Incluir subpastas” para vê-los aqui.";
+            if (SelectedCategory != null && SelectedTag == null)
+                return "Arraste arquivos 3D até aqui para importá-los nesta categoria.";
+            return "Nenhum objeto combina com os filtros ativos.";
+        }
+    }
+
+    /// <summary>Status bar count, e.g. "16 objetos" or "4 de 230 objetos" while filtered.</summary>
+    public string ItemCountText =>
+        (HasSearchText || HasActiveFilters) && LibraryObjectCount > Items.Count
+            ? $"{Items.Count} de {Plural.Objects(LibraryObjectCount)}"
+            : Plural.Objects(Items.Count);
+
+    private void RaiseGalleryStateChanged()
+    {
+        OnPropertyChanged(nameof(EmptyState));
+        OnPropertyChanged(nameof(IsEmptyStateVisible));
+        OnPropertyChanged(nameof(IsLibraryEmpty));
+        OnPropertyChanged(nameof(IsNoResults));
+        OnPropertyChanged(nameof(IsLoadingPlaceholder));
+        OnPropertyChanged(nameof(HasSearchText));
+        OnPropertyChanged(nameof(HasActiveFilters));
+        OnPropertyChanged(nameof(ActiveCategoryLabel));
+        OnPropertyChanged(nameof(ActiveTagLabel));
+        OnPropertyChanged(nameof(NoResultsTitle));
+        OnPropertyChanged(nameof(NoResultsMessage));
+        OnPropertyChanged(nameof(ItemCountText));
+    }
+
+    partial void OnIsLoadingItemsChanged(bool value) => RaiseGalleryStateChanged();
+    partial void OnIsSlowLoadingChanged(bool value) => RaiseGalleryStateChanged();
+    partial void OnLibraryObjectCountChanged(int value) => RaiseGalleryStateChanged();
+
+    /// <summary>Clears the category and tag filters (the "Todos os Objetos" view).</summary>
+    [RelayCommand]
+    private void ShowAllObjects()
+    {
+        SelectedCategory = null;
+        SelectedTag = null;
+    }
+
+    /// <summary>Removes the category filter, keeping any tag filter.</summary>
+    [RelayCommand]
+    private void ClearCategoryFilter() => SelectedCategory = null;
+
+    /// <summary>Removes the tag filter, keeping any category filter.</summary>
+    [RelayCommand]
+    private void ClearTagFilter() => SelectedTag = null;
+
+    private string GetCategoryPath(CategoryNode node)
+    {
+        var names = new List<string> { node.Name };
+        var current = node.Category;
+        var guard = 0;
+        while (current.ParentCategoryId is int parentId &&
+               _categoryLookup.TryGetValue(parentId, out var parent) && guard++ < 32)
+        {
+            names.Insert(0, parent.Name);
+            current = parent.Category;
+        }
+        return string.Join(" › ", names);
+    }
+
+    // ── Repository ───────────────────────────────────────────────────────────
+
     public async Task SwitchRepository(string repoPath)
     {
+        // Edits belong to the library being left; save them before its repository is replaced.
+        CommitPendingEdits();
+
         IsBusy = true;
-        StatusText = "Abrindo repositório...";
+        StatusText = "Abrindo biblioteca...";
 
         try
         {
@@ -334,7 +518,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"Erro ao abrir repositório: {ex.Message}";
+            StatusText = "Não foi possível abrir a biblioteca.";
+            if (ShowWarningAsync != null)
+                await ShowWarningAsync("Não foi possível abrir a biblioteca",
+                    $"{repoPath}\n\n{ErrorMessages.Describe(ex)}");
         }
         finally
         {
@@ -362,6 +549,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ClearSearch() => SearchText = string.Empty;
 
+    // ── Selection and metadata editing ───────────────────────────────────────
+
+    partial void OnSelectedObjectChanging(Object3D? oldValue, Object3D? newValue)
+    {
+        // Moving to another object (or clearing the selection) keeps the edits made so far.
+        if (oldValue != null && !ReferenceEquals(oldValue, newValue) && HasUnsavedChanges)
+            SaveEdits(oldValue);
+    }
+
     partial void OnSelectedObjectChanged(Object3D? value)
     {
         _originalName = value?.Name ?? string.Empty;
@@ -372,6 +568,78 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadAttachments();
         LoadTags();
         LoadProjectInfo(value);
+    }
+
+    /// <summary>
+    /// Saves unsaved name/description edits of the selected object, if any. Called before the
+    /// window closes or the library changes, so edits are never silently dropped.
+    /// </summary>
+    public void CommitPendingEdits()
+    {
+        if (SelectedObject != null && HasUnsavedChanges)
+            SaveEdits(SelectedObject);
+    }
+
+    private bool CanSaveMetadata() => HasUnsavedChanges && !string.IsNullOrWhiteSpace(EditedName);
+
+    [RelayCommand(CanExecute = nameof(CanSaveMetadata))]
+    private void SaveMetadata()
+    {
+        if (SelectedObject != null)
+            SaveEdits(SelectedObject);
+    }
+
+    /// <summary>
+    /// Writes the edited name and description to <paramref name="target"/>. A blank name is
+    /// never persisted; the object keeps its previous name. Returns false when the write failed.
+    /// </summary>
+    private bool SaveEdits(Object3D target)
+    {
+        if (_repository == null) return false;
+
+        var name = EditedName.Trim();
+        var blankNameDiscarded = name.Length == 0;
+        if (blankNameDiscarded) name = _originalName;
+        var description = EditedDescription;
+
+        var previousName = target.Name;
+        var previousDescription = target.Description;
+
+        // Nothing left to write (e.g. the only edit was a cleared name): don't claim a save.
+        if (name == previousName && description == previousDescription)
+        {
+            if (ReferenceEquals(target, SelectedObject) && EditedName != name) EditedName = name;
+            HasUnsavedChanges = false;
+            if (blankNameDiscarded)
+                StatusText = $"O nome vazio foi descartado; “{name}” manteve o nome.";
+            return true;
+        }
+
+        try
+        {
+            target.Name = name;
+            target.Description = description;
+            _repository.UpdateObject(target);
+        }
+        catch (Exception ex)
+        {
+            target.Name = previousName;
+            target.Description = previousDescription;
+            StatusText = $"Não foi possível salvar “{name}”. {ErrorMessages.Describe(ex)}";
+            return false;
+        }
+
+        if (ReferenceEquals(target, SelectedObject))
+        {
+            _originalName = name;
+            _originalDescription = description;
+            if (EditedName != name) EditedName = name;
+        }
+        HasUnsavedChanges = false;
+        StatusText = blankNameDiscarded
+            ? $"Alterações em “{name}” salvas. O nome vazio foi descartado."
+            : $"Alterações em “{name}” salvas.";
+        return true;
     }
 
     /// <summary>
@@ -404,17 +672,17 @@ public partial class MainWindowViewModel : ViewModelBase
         });
     }
 
+    // ── Filters and loading ──────────────────────────────────────────────────
+
     partial void OnSelectedCategoryChanged(CategoryNode? value)
     {
         OnPropertyChanged(nameof(IsAllObjectsSelected));
-        if (value != null) SelectedTag = null;
         LoadItems(SearchText);
     }
 
     partial void OnSelectedTagChanged(Tag? value)
     {
         OnPropertyChanged(nameof(IsAllObjectsSelected));
-        if (value != null) SelectedCategory = null;
         LoadItems(SearchText);
     }
 
@@ -426,11 +694,22 @@ public partial class MainWindowViewModel : ViewModelBase
         CollectExpandedIds(Categories, expandedIds);
 
         Categories.Clear();
+        _categoryLookup = new Dictionary<int, CategoryNode>();
         if (_repository == null) return;
 
-        var allCats = _repository.GetAllCategories().ToList();
+        List<Category> allCats;
+        try
+        {
+            allCats = _repository.GetAllCategories().ToList();
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível carregar as categorias. {ErrorMessages.Describe(ex)}";
+            return;
+        }
+
         var nodeLookup = new Dictionary<int, CategoryNode>();
-        
+
         foreach (var cat in allCats)
         {
             var node = new CategoryNode(cat);
@@ -450,6 +729,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 Categories.Add(node);
             }
         }
+
+        _categoryLookup = nodeLookup;
 
         if (selectCategoryId.HasValue && nodeLookup.TryGetValue(selectCategoryId.Value, out var targetNode))
         {
@@ -501,62 +782,52 @@ public partial class MainWindowViewModel : ViewModelBase
         var repo = _repository;
 
         Items.Clear();
-        StatusText = "Carregando objetos...";
+        IsLoadingItems = true;
 
-        var queryTask = Task.Run(() =>
+        // Only an unusually slow query earns a visible indicator; quick ones would just flicker.
+        _ = Task.Delay(400, ct).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
         {
-            IEnumerable<Object3D> results;
-            if (categoryIds != null)
-            {
-                results = repo.GetAllObjects()
-                    .Where(o => o.CategoryId.HasValue && categoryIds.Contains(o.CategoryId.Value));
-                if (!string.IsNullOrWhiteSpace(searchTerm))
-                    results = results.Where(o =>
-                        (o.Name?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (o.Description?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0));
-            }
-            else
-            {
-                results = repo.SearchObjects(searchTerm, null, tagId);
-            }
+            if (!ct.IsCancellationRequested && IsLoadingItems) IsSlowLoading = true;
+        }), TaskContinuationOptions.OnlyOnRanToCompletion);
 
-            IEnumerable<Object3D> sorted = sortOrder switch
-            {
-                SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
-                SortOrder.NameAsc => results.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase),
-                SortOrder.NameDesc => results.OrderByDescending(o => o.Name, StringComparer.OrdinalIgnoreCase),
-                _ => results.OrderByDescending(o => o.CreatedAt)
-            };
-            return sorted.ToList();
-        });
-
-        bool dialogShown = false;
-        if (await Task.WhenAny(queryTask, Task.Delay(2000)) != queryTask && !ct.IsCancellationRequested)
-        {
-            ShowLoadingDialog?.Invoke();
-            dialogShown = true;
-        }
-
+        int libraryCount;
         List<Object3D> items;
         try
         {
-            items = await queryTask;
+            (libraryCount, items) = await Task.Run(() =>
+            {
+                var count = repo.CountObjects();
+                var results = repo.SearchObjects(searchTerm, categoryIds, tagId);
+
+                IEnumerable<Object3D> sorted = sortOrder switch
+                {
+                    SortOrder.DateAsc => results.OrderBy(o => o.CreatedAt),
+                    SortOrder.NameAsc => results.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase),
+                    SortOrder.NameDesc => results.OrderByDescending(o => o.Name, StringComparer.OrdinalIgnoreCase),
+                    _ => results.OrderByDescending(o => o.CreatedAt)
+                };
+                return (count, sorted.ToList());
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            if (dialogShown) CloseLoadingDialog?.Invoke();
+            if (ct.IsCancellationRequested) return;
+            IsSlowLoading = false;
+            IsLoadingItems = false;
+            StatusText = $"Não foi possível carregar os objetos. {ErrorMessages.Describe(ex)}";
             return;
         }
 
-        if (dialogShown) CloseLoadingDialog?.Invoke();
         if (ct.IsCancellationRequested) return;
 
+        LibraryObjectCount = libraryCount;
         foreach (var item in items)
         {
             item.CategoryName = item.CategoryId.HasValue && categoryMap.TryGetValue(item.CategoryId.Value, out var catName) ? catName : null;
             Items.Add(item);
         }
-        StatusText = "Pronto.";
+        IsSlowLoading = false;
+        IsLoadingItems = false;
     }
 
     private Dictionary<int, string> BuildCategoryNameMap()
@@ -626,6 +897,12 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    // ── Import ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Imports 3D files into the selected category and returns only the objects that were new
+    /// to the library. Files already catalogued are skipped and reported in the status bar.
+    /// </summary>
     public async Task<List<Object3D>> ImportFiles(string[] filePaths)
     {
         var importedObjects = new List<Object3D>();
@@ -633,7 +910,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         int total = filePaths.Length;
-        int imported = 0;
+        int processed = 0;
+        int duplicates = 0;
+        int missing = 0;
+        Object3D? lastDuplicate = null;
+        string? current = null;
 
         var categoryId = SelectedCategory?.Category.Id;
 
@@ -641,17 +922,24 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             foreach (var path in filePaths)
             {
-                imported++;
-                StatusText = $"Importando {imported}/{total}: {Path.GetFileName(path)}";
-                var obj = await Task.Run(() => _libraryManager.ImportFile(path, categoryId));
-                if (obj != null) importedObjects.Add(obj);
+                processed++;
+                current = Path.GetFileName(path);
+                StatusText = $"Importando {processed}/{total}: {current}";
+                var result = await Task.Run(() => _libraryManager.ImportFile(path, categoryId));
+                if (result.Object == null) missing++;
+                else if (result.IsDuplicate) { duplicates++; lastDuplicate = result.Object; }
+                else importedObjects.Add(result.Object);
             }
             LoadItems(SearchText);
-            StatusText = $"{imported} objeto(s) importado(s)";
+            StatusText = DescribeImport(importedObjects.Count, duplicates, missing, lastDuplicate);
         }
         catch (Exception ex)
         {
-            StatusText = $"Erro na importação: {ex.Message}";
+            LoadItems(SearchText);
+            var done = importedObjects.Count > 0
+                ? $" {Plural.Count(importedObjects.Count, "objeto importado", "objetos importados")} antes do erro."
+                : string.Empty;
+            StatusText = $"Importação interrompida em “{current}”: {ErrorMessages.Describe(ex)}{done}";
         }
         finally
         {
@@ -661,13 +949,38 @@ public partial class MainWindowViewModel : ViewModelBase
         return importedObjects;
     }
 
-    public (int objectsImported, int attachmentsImported, int? createdCategoryId) RunImportFolder(
+    private static string DescribeImport(int imported, int duplicates, int missing, Object3D? lastDuplicate)
+    {
+        var parts = new List<string>();
+        if (imported > 0)
+            parts.Add($"{Plural.Count(imported, "objeto importado", "objetos importados")}.");
+        if (duplicates == 1 && imported == 0 && lastDuplicate != null)
+            parts.Add($"Esse arquivo já está na biblioteca como “{lastDuplicate.Name}”.");
+        else if (duplicates > 0)
+            parts.Add($"{Plural.Count(duplicates, "arquivo já estava", "arquivos já estavam")} na biblioteca e {(duplicates == 1 ? "foi ignorado" : "foram ignorados")}.");
+        if (missing > 0)
+            parts.Add($"{Plural.Count(missing, "arquivo não foi encontrado", "arquivos não foram encontrados")}.");
+        return parts.Count > 0 ? string.Join(" ", parts) : "Nenhum objeto importado.";
+    }
+
+    /// <summary>Phrase for the end of a folder import, shared by the dialog and the status bar.</summary>
+    public static string DescribeFolderImport(FolderImportResult result)
+    {
+        var text = $"{Plural.Count(result.ObjectsImported, "objeto", "objetos")} e " +
+                   $"{Plural.Count(result.AttachmentsImported, "anexo", "anexos")} importados.";
+        if (result.DuplicatesSkipped > 0)
+            text += $" {Plural.Count(result.DuplicatesSkipped, "arquivo já estava", "arquivos já estavam")} na biblioteca e " +
+                    $"{(result.DuplicatesSkipped == 1 ? "foi ignorado" : "foram ignorados")}.";
+        return text;
+    }
+
+    public FolderImportResult RunImportFolder(
         string folderPath,
         Action<string>? onProgress = null,
-        Action<int, int>? onCounts = null,
+        Action<FolderImportResult>? onCounts = null,
         CancellationToken cancellationToken = default)
     {
-        if (_libraryManager == null) return (0, 0, null);
+        if (_libraryManager == null) return new FolderImportResult(0, 0, 0, null);
         var parentCategoryId = SelectedCategory?.Category.Id;
         return _libraryManager.ImportFolder(folderPath, parentCategoryId,
             onProgress, onCounts, cancellationToken);
@@ -689,7 +1002,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Attaches the given files to each of the specified objects.</summary>
     public Task ImportAttachmentsToObjects(string[] filePaths, List<Object3D> objects) =>
-        ImportAttachmentsTo(filePaths, objects, $" a {objects.Count} objeto(s)");
+        ImportAttachmentsTo(filePaths, objects, $" a {Plural.Objects(objects.Count)}");
 
     private async Task ImportAttachmentsTo(string[] filePaths, IReadOnlyList<Object3D> objects, string targetSuffix)
     {
@@ -697,82 +1010,123 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         int total = filePaths.Length;
-        int imported = 0;
+        int attached = 0;
+        string? current = null;
 
         try
         {
             foreach (var path in filePaths)
             {
-                imported++;
-                StatusText = $"Anexando {imported}/{total}: {Path.GetFileName(path)}{targetSuffix}";
+                current = Path.GetFileName(path);
+                StatusText = $"Anexando {attached + 1}/{total}: {current}{targetSuffix}";
                 foreach (var obj in objects)
                 {
                     await Task.Run(() => _libraryManager.ImportAttachment(obj.Id, path));
                 }
+                attached++;
             }
-            LoadAttachments();
-            StatusText = $"{imported} arquivo(s) anexado(s){targetSuffix}";
+            StatusText = $"{Plural.Count(attached, "arquivo anexado", "arquivos anexados")}{targetSuffix}.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Erro ao anexar: {ex.Message}";
+            StatusText = $"Não foi possível anexar “{current}”. {ErrorMessages.Describe(ex)}";
         }
         finally
         {
+            LoadAttachments();
             IsBusy = false;
         }
     }
 
-    [RelayCommand]
-    private void SaveMetadata()
-    {
-        if (SelectedObject != null && _repository != null)
-        {
-            SelectedObject.Name = EditedName;
-            SelectedObject.Description = EditedDescription;
-            _repository.UpdateObject(SelectedObject);
-            _originalName = EditedName;
-            _originalDescription = EditedDescription;
-            HasUnsavedChanges = false;
-            LoadItems(SearchText);
-        }
-    }
+    // ── Attachments and files ────────────────────────────────────────────────
 
     [RelayCommand]
-    private void RemoveAttachment(Attachment? attachment)
+    private async Task RemoveAttachment(Attachment? attachment)
     {
-        if (attachment != null && _libraryManager != null)
+        if (attachment == null || _libraryManager == null || _repository == null) return;
+
+        var kind = attachment.Type.TrimStart('.').ToUpperInvariant();
+        bool shared = _repository.CountAttachmentsByFilePath(attachment.FilePath) > 1;
+        var message = shared
+            ? $"Remover este anexo {kind} do objeto?\n\nOutros objetos continuam com o mesmo arquivo."
+            : $"Remover este anexo {kind} do objeto?\n\nO arquivo será apagado da pasta da biblioteca.";
+
+        if (ShowConfirmAsync == null ||
+            !await ShowConfirmAsync(new ConfirmRequest("Remover anexo", message, "Remover")))
+            return;
+
+        try
         {
             _libraryManager.DeleteAttachment(attachment);
             Attachments.Remove(attachment);
+            StatusText = "Anexo removido.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível remover o anexo. {ErrorMessages.Describe(ex)}";
         }
     }
 
     [RelayCommand]
-    private void OpenFileInSystem(string? filePath)
+    private async Task OpenFileInSystem(string? filePath)
     {
-        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+
+        if (!File.Exists(filePath))
         {
-            try
+            if (ShowWarningAsync != null)
+                await ShowWarningAsync("Arquivo não encontrado",
+                    $"“{Path.GetFileName(filePath)}” não está mais na pasta da biblioteca. " +
+                    "Ele pode ter sido movido ou apagado fora do STLHub.");
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = filePath,
-                    UseShellExecute = true
-                });
-            }
-            catch { }
+                FileName = filePath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            var extension = Path.GetExtension(filePath);
+            if (ShowWarningAsync != null)
+                await ShowWarningAsync("Não foi possível abrir o arquivo",
+                    $"{ErrorMessages.Describe(ex)}\n\nAssocie um programa aos arquivos {extension} " +
+                    "(por exemplo, o seu fatiador) e tente de novo.");
         }
     }
+
+    // ── Tags ─────────────────────────────────────────────────────────────────
 
     [RelayCommand]
     private void AddTag()
     {
-        if (string.IsNullOrWhiteSpace(NewTagName) || SelectedObject == null || _repository == null) return;
-        
-        var tag = _repository.AddOrGetTag(NewTagName);
-        _repository.AddTagToObject(SelectedObject.Id, tag.Id);
-        
+        var name = NewTagName.Trim();
+        if (name.Length == 0 || SelectedObject == null || _repository == null) return;
+
+        // Reuse an existing tag that differs only in case ("pla" → "PLA").
+        var existing = AllTags.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (existing != null && ObjectTags.Any(t => t.Id == existing.Id))
+        {
+            StatusText = $"Este objeto já tem a tag “{existing.Name}”.";
+            NewTagName = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var tag = existing ?? _repository.AddOrGetTag(name);
+            _repository.AddTagToObject(SelectedObject.Id, tag.Id);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível adicionar a tag “{name}”. {ErrorMessages.Describe(ex)}";
+            return;
+        }
+
         NewTagName = string.Empty;
         LoadTags();
         LoadAllTags();
@@ -781,19 +1135,45 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void RemoveTag(Tag? tag)
     {
-        if (tag != null && SelectedObject != null && _repository != null)
+        if (tag == null || SelectedObject == null || _repository == null) return;
+
+        try
         {
             _repository.RemoveTagFromObject(SelectedObject.Id, tag.Id);
-            LoadTags();
         }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível remover a tag. {ErrorMessages.Describe(ex)}";
+            return;
+        }
+        LoadTags();
+        if (SelectedTag?.Id == tag.Id)
+            LoadItems(SearchText);
     }
 
     [RelayCommand]
-    private void DeleteTagGlobal(Tag? tag)
+    private async Task DeleteTagGlobal(Tag? tag)
     {
         if (tag == null || _repository == null) return;
 
-        _repository.DeleteTag(tag.Id);
+        int count = _repository.CountObjectsWithTag(tag.Id);
+        var message = count > 0
+            ? $"A tag “{tag.Name}” será removida de {Plural.Objects(count)}. Os objetos não serão apagados."
+            : $"A tag “{tag.Name}” não está em nenhum objeto e será apagada.";
+
+        if (ShowConfirmAsync == null ||
+            !await ShowConfirmAsync(new ConfirmRequest("Excluir tag", message, "Excluir tag")))
+            return;
+
+        try
+        {
+            _repository.DeleteTag(tag.Id);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível excluir a tag. {ErrorMessages.Describe(ex)}";
+            return;
+        }
 
         if (SelectedTag?.Id == tag.Id)
             SelectedTag = null;
@@ -801,35 +1181,39 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadAllTags();
         LoadTags();
         LoadItems(SearchText);
+        StatusText = $"Tag “{tag.Name}” excluída.";
     }
 
+    // ── Categories ───────────────────────────────────────────────────────────
+
     [RelayCommand]
-    private void AddRootCategory()
-    {
-        var cat = new Category { Name = "Nova Categoria" };
-        _repository?.AddCategory(cat);
-        LoadCategories();
-        var node = FindCategoryNode(Categories, cat.Id);
-        if (node != null)
-        {
-            SelectedCategory = node;
-            node.IsEditing = true;
-            FocusCategoryEditBox?.Invoke();
-        }
-    }
+    private void AddRootCategory() => AddCategoryUnder(null);
 
     [RelayCommand]
     private void AddSubCategory(CategoryNode? parent)
     {
-        if (parent == null) return;
-        var cat = new Category { Name = "Nova Categoria", ParentCategoryId = parent.Category.Id };
-        _repository?.AddCategory(cat);
-        LoadCategories();
-        var node = FindCategoryNode(Categories, cat.Id);
-        if (node != null)
+        if (parent != null) AddCategoryUnder(parent);
+    }
+
+    private void AddCategoryUnder(CategoryNode? parent)
+    {
+        if (_repository == null) return;
+
+        var cat = new Category { Name = "Nova Categoria", ParentCategoryId = parent?.Category.Id };
+        try
         {
-            SelectedCategory = node;
-            node.IsEditing = true;
+            _repository.AddCategory(cat);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível criar a categoria. {ErrorMessages.Describe(ex)}";
+            return;
+        }
+
+        LoadCategories(cat.Id);
+        if (FindCategoryNode(Categories, cat.Id) is { } node)
+        {
+            node.BeginEdit();
             FocusCategoryEditBox?.Invoke();
         }
     }
@@ -840,19 +1224,33 @@ public partial class MainWindowViewModel : ViewModelBase
         if (node == null || _repository == null || _libraryManager == null) return;
 
         int count = CountObjectsRecursive(node);
+        var scope = node.Children.Count > 0 ? $"“{node.Name}” e suas subcategorias contêm" : $"“{node.Name}” contém";
         string message = count > 0
-            ? $"A pasta \"{node.Name}\" contém {count} objeto(s) 3D.\nOs objetos e seus arquivos serão excluídos permanentemente.\n\nDeseja excluir mesmo assim?"
-            : $"Deseja excluir a pasta \"{node.Name}\"?";
+            ? $"{scope} {Plural.Objects(count)}.\n\nOs objetos e seus arquivos serão apagados da biblioteca permanentemente."
+            : $"A categoria “{node.Name}” está vazia e será removida.";
 
-        if (ShowConfirmAsync != null)
+        if (ShowConfirmAsync == null ||
+            !await ShowConfirmAsync(new ConfirmRequest("Excluir categoria", message, "Excluir")))
+            return;
+
+        IsBusy = true;
+        StatusText = $"Excluindo “{node.Name}”...";
+        var parentId = node.Category.ParentCategoryId;
+        try
         {
-            bool confirmed = await ShowConfirmAsync("Excluir pasta", message);
-            if (!confirmed) return;
+            await Task.Run(() => DeleteObjectsRecursive(node));
+            _repository.DeleteCategory(node.Category.Id);
+            StatusText = $"Categoria “{node.Name}” excluída.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"A exclusão de “{node.Name}” não terminou. {ErrorMessages.Describe(ex)}";
+        }
+        finally
+        {
+            IsBusy = false;
         }
 
-        var parentId = node.Category.ParentCategoryId;
-        await Task.Run(() => DeleteObjectsRecursive(node));
-        _repository.DeleteCategory(node.Category.Id);
         LoadCategories();
         SelectedCategory = parentId.HasValue ? FindCategoryNode(Categories, parentId.Value) : null;
         LoadItems(SearchText);
@@ -892,24 +1290,44 @@ public partial class MainWindowViewModel : ViewModelBase
     private void RenameCategory(CategoryNode? node)
     {
         if (node == null || _repository == null) return;
-        node.IsEditing = true;
+        node.BeginEdit();
     }
 
+    /// <summary>
+    /// Ends an inline rename and saves it. A blank name restores the previous one; calling this
+    /// when the node is not being edited (e.g. after Esc) does nothing.
+    /// </summary>
     public void CommitRenameCategory(CategoryNode node)
     {
-        if (_repository == null) return;
-        node.IsEditing = false;
-        node.Category.Name = node.Name;
-        _repository.UpdateCategory(node.Category);
+        if (_repository == null || !node.IsEditing) return;
+        if (!node.EndEdit()) return;
+
+        try
+        {
+            _repository.UpdateCategory(node.Category);
+            OnPropertyChanged(nameof(ActiveCategoryLabel));
+            OnPropertyChanged(nameof(NoResultsTitle));
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível renomear a categoria. {ErrorMessages.Describe(ex)}";
+            LoadCategories();
+        }
     }
 
     public void MoveObjectToCategory(Object3D obj, CategoryNode? node)
     {
-        if (_repository != null)
+        if (_repository == null) return;
+        try
         {
             _repository.UpdateObjectCategory(obj.Id, node?.Category.Id);
-            LoadItems(SearchText);
+            StatusText = node != null ? $"“{obj.Name}” movido para “{node.Name}”." : $"“{obj.Name}” agora está sem categoria.";
         }
+        catch (Exception ex)
+        {
+            StatusText = $"Não foi possível mover “{obj.Name}”. {ErrorMessages.Describe(ex)}";
+        }
+        LoadItems(SearchText);
     }
 
     public void MoveCategoryToParent(CategoryNode source, CategoryNode target)
@@ -917,8 +1335,17 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_repository == null) return;
         if (source.Category.ParentCategoryId == target.Category.Id) return;
 
+        var previousParent = source.Category.ParentCategoryId;
         source.Category.ParentCategoryId = target.Category.Id;
-        _repository.UpdateCategory(source.Category);
+        try
+        {
+            _repository.UpdateCategory(source.Category);
+        }
+        catch (Exception ex)
+        {
+            source.Category.ParentCategoryId = previousParent;
+            StatusText = $"Não foi possível mover a categoria. {ErrorMessages.Describe(ex)}";
+        }
         LoadCategories();
     }
 
@@ -927,27 +1354,36 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_repository == null) return;
         if (source.Category.ParentCategoryId == null) return;
 
+        var previousParent = source.Category.ParentCategoryId;
         source.Category.ParentCategoryId = null;
-        _repository.UpdateCategory(source.Category);
+        try
+        {
+            _repository.UpdateCategory(source.Category);
+        }
+        catch (Exception ex)
+        {
+            source.Category.ParentCategoryId = previousParent;
+            StatusText = $"Não foi possível mover a categoria. {ErrorMessages.Describe(ex)}";
+        }
         LoadCategories();
     }
+
+    // ── Objects ──────────────────────────────────────────────────────────────
 
     [RelayCommand]
     private async Task DeleteObject(Object3D? obj)
     {
         if (obj == null || _libraryManager == null) return;
 
-        bool confirmed = false;
-        if (ShowConfirmAsync != null)
-        {
-            confirmed = await ShowConfirmAsync(
-                "Excluir Objeto",
-                $"Tem certeza que deseja excluir \"{obj.Name}\"?\n\nEssa ação não pode ser desfeita.");
-        }
-        if (!confirmed) return;
+        if (ShowConfirmAsync == null ||
+            !await ShowConfirmAsync(new ConfirmRequest(
+                "Excluir objeto",
+                $"Excluir “{obj.Name}”?\n\nO arquivo e seus anexos serão apagados da biblioteca. Essa ação não pode ser desfeita.",
+                "Excluir")))
+            return;
 
         IsBusy = true;
-        StatusText = $"Excluindo \"{obj.Name}\"...";
+        StatusText = $"Excluindo “{obj.Name}”...";
 
         try
         {
@@ -955,16 +1391,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 SelectedObject = null;
 
             await Task.Run(() => _libraryManager.DeleteObject(obj));
-            LoadItems(SearchText);
-            StatusText = "Objeto excluído";
+            StatusText = $"“{obj.Name}” excluído.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Erro ao excluir: {ex.Message}";
+            StatusText = $"Não foi possível excluir “{obj.Name}”. {ErrorMessages.Describe(ex)}";
         }
         finally
         {
             IsBusy = false;
+            LoadItems(SearchText);
         }
     }
 
@@ -974,7 +1410,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (obj == null || _libraryManager == null) return;
 
         IsBusy = true;
-        StatusText = $"Regenerando thumbnail de \"{obj.Name}\"...";
+        StatusText = $"Refazendo a miniatura de “{obj.Name}”...";
 
         try
         {
@@ -988,11 +1424,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 SelectedObject = null;
                 SelectedObject = obj;
             }
-            StatusText = "Thumbnail regenerado";
+            StatusText = $"Miniatura de “{obj.Name}” refeita.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Erro ao regenerar thumbnail: {ex.Message}";
+            StatusText = $"Não foi possível refazer a miniatura. {ErrorMessages.Describe(ex)}";
         }
         finally
         {

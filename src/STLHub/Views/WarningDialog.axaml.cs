@@ -14,8 +14,15 @@ public partial class WarningDialog : Window
 
     public WarningDialog(string title, string message) : this()
     {
+        Title = title;
         TitleText.Text = title;
         MessageText.Text = message;
+    }
+
+    protected override void OnOpened(System.EventArgs e)
+    {
+        base.OnOpened(e);
+        OkButton.Focus();
     }
 
     private void Ok_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
